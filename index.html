@@ -1,312 +1,176 @@
 <!DOCTYPE html><html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Gestionnaire de Fichiers Local (IndexedDB)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestionnaire de Fichiers</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f4;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f2f2f2;
     }
-    h1, h2 {
-      color: #333;
+    h1 {
+      text-align: center;
     }
-    .section {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
     }
-    input, select, button {
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    .folder {
-      margin-top: 20px;
-    }
-    .preview {
+    .file-list, .folder-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-    }
-    .preview img, .preview video {
-      width: 100%;
-      max-width: 240px;
-      max-height: 180px;
-      margin: 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .preview video {
-      object-fit: cover;
-      display: block;
-    }
-    .preview img:hover, .preview video:hover {
-      transform: scale(1.05);
-    }
-    .file-actions button {
-      margin-left: 10px;
-      background-color: #f44336;
-      border: none;
-      color: white;
-      padding: 5px 8px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background-color 0.3s ease;
-    }
-    .file-actions button:hover {
-      background-color: #d32f2f;
-    }
-    #fullscreenViewer {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,0.9);
-      display: none;
-      align-items: center;
+      gap: 1rem;
       justify-content: center;
-      z-index: 9999;
-      cursor: zoom-out;
     }
-    #fullscreenViewer img, #fullscreenViewer video {
-      max-width: 90vw;
-      max-height: 90vh;
+    .file, .folder {
+      width: 160px;
+      height: 160px;
+      background: white;
+      padding: 0.5rem;
       border-radius: 10px;
-      user-select: none;
-      box-shadow: 0 0 20px rgba(255,255,255,0.3);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      text-align: center;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    @media (max-width: 600px) {
-      .preview {
-        flex-direction: column;
-        gap: 8px;
-      }
-      .preview img, .preview video {
-        max-width: 100%;
-        max-height: none;
-        margin: 5px 0;
-      }
-      .preview div {
-        width: 100% !important;
-        display: block;
-      }
-      input, select, button {
-        width: 100%;
-        padding: 12px;
-        font-size: 1.1rem;
-        margin: 10px 0;
-        border-radius: 8px;
-      }
-      h1, h2 {
-        font-size: 1.3rem;
-      }
+    img, video {
+      max-width: 100%;
+      max-height: 100px;
+      object-fit: contain;
+      border-radius: 5px;
+    }
+    select, input[type="file"], button {
+      padding: 0.5rem;
+      margin: 0.3rem;
+      font-size: 1rem;
+    }
+    #backButton {
+      display: none;
+      margin-bottom: 1rem;
+      background: #444;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <h1>📁 Gestionnaire de Fichiers Local</h1>  <div class="section">
-    <h2>Créer un dossier</h2>
+  <h1>Mes Dossiers</h1>
+  <div class="controls">
     <input type="text" id="folderName" placeholder="Nom du dossier" />
-    <button onclick="createFolder()">Créer</button>
-  </div>  <div class="section">
-    <h2>Ajouter des fichiers</h2>
-    <select id="folderSelect">
-      <option disabled selected>-- Choisir un dossier --</option>
-    </select>
-    <input type="file" id="fileInput" multiple />
-    <label for="sortSelect">Trier :</label>
-    <select id="sortSelect" onchange="loadFolders()">
-      <option value="last" selected>Dernier ajout</option>
+    <button onclick="createFolder()">Créer un dossier</button>
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" />
+    <select id="sortOption" onchange="renderFolders()">
+      <option value="recent">Dernier ajout</option>
       <option value="alpha">Ordre alphabétique</option>
     </select>
-    <button onclick="addFiles()">Ajouter</button>
-  </div>  <div class="section">
-    <h2>Dossiers et Fichiers</h2>
-    <div id="foldersContainer"></div>
-  </div>  <div id="fullscreenViewer" onclick="hideFullscreen()"></div>  <script>
-    const DB_NAME = "FileManagerDB";
-    const DB_VERSION = 1;
-    const STORE_NAME = "files";
-    let db;
+  </div>
+  <button id="backButton" onclick="goBack()">⬅ Retour aux dossiers</button>
+  <div class="folder-list" id="folderList"></div>
+  <div class="file-list" id="fileList"></div>  <script>
+    let data = JSON.parse(localStorage.getItem("fileManager") || '{}');
+    let currentFolder = null;
 
-    function openDB() {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = () => alert("Erreur d'accès à IndexedDB");
-      request.onupgradeneeded = (event) => {
-        db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-        }
-      };
-      request.onsuccess = (event) => {
-        db = event.target.result;
-        loadFolders();
-      };
-    }
-
-    function saveFile(folder, file, dataURL) {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      const fileRecord = { folder, name: file.name, type: file.type, data: dataURL };
-      store.add(fileRecord).onsuccess = () => loadFolders();
-    }
-
-    function loadFolders() {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const data = request.result;
-        const sortMethod = document.getElementById('sortSelect').value;
-        if (sortMethod === 'alpha') {
-          data.sort((a, b) => a.name.localeCompare(b.name, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-        } else {
-          data.sort((a, b) => b.id - a.id);
-        }
-        const foldersMap = {};
-        data.forEach(file => {
-          if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
-          foldersMap[file.folder].push(file);
-        });
-        renderFolders(foldersMap);
-        updateFolderSelect(Object.keys(foldersMap));
-      };
-    }
-
-    function renderFolders(foldersMap) {
-      const container = document.getElementById("foldersContainer");
-      container.innerHTML = "";
-      for (let folder in foldersMap) {
-        const div = document.createElement("div");
-        div.className = "folder";
-        div.innerHTML = `<h3>${folder}</h3><div class="preview" id="preview-${folder}"></div>`;
-        const preview = div.querySelector('.preview');
-        foldersMap[folder].forEach(file => {
-          let element;
-          if (file.type.startsWith('image')) {
-            element = document.createElement('img');
-            element.src = file.data;
-          } else if (file.type.startsWith('video')) {
-            element = document.createElement('video');
-            element.src = file.data;
-            element.controls = true;
-          }
-          if (element) {
-            element.onclick = () => showFullscreen(file);
-            const wrapper = document.createElement('div');
-            wrapper.style.display = 'inline-block';
-            wrapper.appendChild(element);
-            const delBtn = document.createElement('button');
-            delBtn.textContent = 'Supprimer';
-            delBtn.className = 'file-actions-btn';
-            delBtn.onclick = (e) => {
-              e.stopPropagation();
-              deleteFile(file.id);
-            };
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'file-actions';
-            actionsDiv.appendChild(delBtn);
-            wrapper.appendChild(actionsDiv);
-            preview.appendChild(wrapper);
-          }
-        });
-        container.appendChild(div);
-      }
-    }
-
-    function updateFolderSelect(folders) {
-      folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-      const select = document.getElementById("folderSelect");
-      const currentValue = select.value;
-      select.innerHTML = '<option disabled>-- Choisir un dossier --</option>';
-      folders.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f;
-        opt.textContent = f;
-        select.appendChild(opt);
-      });
-      if (folders.includes(currentValue)) select.value = currentValue;
+    function saveData() {
+      localStorage.setItem("fileManager", JSON.stringify(data));
     }
 
     function createFolder() {
-      const name = document.getElementById('folderName').value.trim();
-      if (!name) return alert("Nom du dossier invalide.");
-      const select = document.getElementById('folderSelect');
-      const exists = [...select.options].some(o => o.value === name);
-      if (!exists) {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-        select.value = name;
+      const name = document.getElementById("folderName").value.trim();
+      if (name && !data[name]) {
+        data[name] = [];
+        saveData();
+        renderFolders();
+        document.getElementById("folderName").value = "";
       }
-      document.getElementById('folderName').value = '';
     }
 
-    function addFiles() {
-      const folderName = document.getElementById('folderSelect').value;
-      const files = document.getElementById('fileInput').files;
-      if (!folderName || files.length === 0) return alert("Sélectionne un dossier et des fichiers");
-      for (let file of files) {
+    document.getElementById("fileInput").addEventListener("change", function (e) {
+      if (!currentFolder) return;
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          saveFile(folderName, file, e.target.result);
-        };
+        reader.onload = function (evt) {
+          data[currentFolder].push({
+            name: file.name,
+            type: file.type,
+            src: evt.target.result,
+            date: new Date().toISOString()
+          });
+          saveData();
+          renderFiles(currentFolder);
+        }
         reader.readAsDataURL(file);
-      }
-      document.getElementById('fileInput').value = '';
-    }
-
-    function deleteFile(id) {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      store.delete(id).onsuccess = () => loadFolders();
-    }
-
-    function showFullscreen(file) {
-      const overlay = document.getElementById('fullscreenViewer');
-      overlay.innerHTML = '';
-      let element;
-      if (file.type.startsWith('image')) {
-        element = document.createElement('img');
-        element.src = file.data;
-      } else if (file.type.startsWith('video')) {
-        element = document.createElement('video');
-        element.src = file.data;
-        element.controls = true;
-        element.autoplay = true;
-      }
-      overlay.appendChild(element);
-      overlay.style.display = 'flex';
-    }
-
-    function hideFullscreen() {
-      const overlay = document.getElementById('fullscreenViewer');
-      overlay.style.display = 'none';
-      overlay.innerHTML = '';
-    }
-
-    document.getElementById('fullscreenViewer').addEventListener('click', (e) => {
-      if (e.target.id === 'fullscreenViewer') hideFullscreen();
+      });
     });
 
-    window.onload = openDB;
+    function renderFolders() {
+      const folderList = document.getElementById("folderList");
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = "";
+      folderList.innerHTML = "";
+      currentFolder = null;
+      document.getElementById("backButton").style.display = "none";
+
+      let folders = Object.keys(data);
+      const sortOption = document.getElementById("sortOption").value;
+      if (sortOption === "alpha") {
+        folders.sort((a, b) => a.localeCompare(b, ['tr', 'fr'], { sensitivity: 'accent' }));
+      } else {
+        folders.sort((a, b) => {
+          const lastA = data[a][data[a].length - 1]?.date || '';
+          const lastB = data[b][data[b].length - 1]?.date || '';
+          return new Date(lastB) - new Date(lastA);
+        });
+      }
+
+      folders.forEach(folder => {
+        const div = document.createElement("div");
+        div.className = "folder";
+        div.textContent = folder;
+        div.onclick = () => renderFiles(folder);
+        folderList.appendChild(div);
+      });
+    }
+
+    function renderFiles(folder) {
+      currentFolder = folder;
+      document.getElementById("folderList").innerHTML = "";
+      document.getElementById("fileList").innerHTML = "";
+      document.getElementById("backButton").style.display = "block";
+
+      data[folder].forEach(file => {
+        const div = document.createElement("div");
+        div.className = "file";
+        if (file.type.startsWith("image")) {
+          const img = document.createElement("img");
+          img.src = file.src;
+          div.appendChild(img);
+        } else if (file.type.startsWith("video")) {
+          const video = document.createElement("video");
+          video.src = file.src;
+          video.controls = true;
+          div.appendChild(video);
+        }
+        const name = document.createElement("div");
+        name.textContent = file.name;
+        div.appendChild(name);
+        document.getElementById("fileList").appendChild(div);
+      });
+    }
+
+    function goBack() {
+      currentFolder = null;
+      renderFolders();
+    }
+
+    renderFolders();
   </script></body>
 </html>
