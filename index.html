@@ -137,6 +137,14 @@
       <option disabled selected>-- Choisir un dossier --</option>
     </select>
     <input type="file" id="fileInput" multiple />
+    
+    <!-- Menu déroulant Trier -->
+    <label for="sortSelect">Trier :</label>
+    <select id="sortSelect" onchange="loadFolders()">
+      <option value="last" selected>Dernier ajout</option>
+      <option value="alpha">Ordre alphabétique</option>
+    </select>
+    
     <button onclick="addFiles()">Ajouter</button>
   </div>
 
@@ -185,6 +193,17 @@
 
       request.onsuccess = () => {
         const data = request.result;
+
+        // Récupère la valeur du tri
+        const sortMethod = document.getElementById('sortSelect').value;
+
+        // Trie les fichiers selon la méthode
+        if (sortMethod === 'alpha') {
+          data.sort((a, b) => a.name.localeCompare(b.name));
+        } else if (sortMethod === 'last') {
+          data.sort((a, b) => b.id - a.id); // id plus grand = plus récent
+        }
+
         const foldersMap = {};
         data.forEach(file => {
           if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
