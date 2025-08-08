@@ -261,22 +261,27 @@
     let currentFileIndex = -1;
 
     function openDB() {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onerror = () => {
-        console.error("Erreur d'accès à IndexedDB");
-        alert("Erreur d'accès à IndexedDB");
-      };
-      request.onupgradeneeded = (event) => {
-        db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-        }
-      };
-      request.onsuccess = (event) => {
-        db = event.target.result;
-        console.log("Base de données ouverte avec succès");
-        loadFolders();
-      };
+      try {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => {
+          console.error("Erreur d'accès à IndexedDB");
+          alert("Erreur d'accès à la base de données. Vérifiez la console pour plus de détails.");
+        };
+        request.onupgradeneeded = (event) => {
+          db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+          }
+        };
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log("Base de données ouverte avec succès");
+          loadFolders();
+        };
+      } catch (err) {
+        console.error("Erreur lors de l'ouverture de la base de données:", err);
+        alert("Erreur critique lors du chargement. Vérifiez la console.");
+      }
     }
 
     function showLoading(show) {
@@ -284,209 +289,256 @@
     }
 
     function saveFile(folder, file, dataURL) {
-      showLoading(true);
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      const fileRecord = { folder, name: file.name, type: file.type, data: dataURL };
-      console.log(`Enregistrement du fichier: ${file.name} dans le dossier ${folder}`);
-      store.add(fileRecord).onsuccess = () => {
-        console.log(`Fichier ${file.name} ajouté avec succès`);
-        loadFolders();
+      try {
+        showLoading(true);
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const fileRecord = { folder, name: file.name, type: file.type || "unknown", data: dataURL };
+        console.log(`Enregistrement du fichier: ${file.name} dans ${folder}`);
+        store.add(fileRecord).onsuccess = () => {
+          console.log(`Fichier ${file.name} ajouté avec succès`);
+          loadFolders();
+          showLoading(false);
+          alert("Fichier ajouté avec succès !");
+        };
+        store.add(fileRecord).onerror = (e) => {
+          console.error(`Erreur lors de l'ajout du fichier ${file.name}:`, e);
+          showLoading(false);
+          alert(`Erreur lors de l'ajout du fichier ${file.name}`);
+        };
+      } catch (err) {
+        console.error("Erreur lors de l'enregistrement du fichier:", err);
         showLoading(false);
-        alert("Fichier ajouté avec succès !");
-      };
-      store.add(fileRecord).onerror = (e) => {
-        console.error(`Erreur lors de l'ajout du fichier ${file.name}:`, e);
-        showLoading(false);
-        alert(`Erreur lors de l'ajout du fichier ${file.name}`);
-      };
+        alert("Erreur lors de l'enregistrement. Vérifiez la console.");
+      }
     }
 
     function loadFolders() {
-      showLoading(true);
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const data = request.result.filter(file => file.folder && file.name && file.data);
-        console.log("Données chargées depuis IndexedDB:", data);
-        const foldersMap = {};
-        data.forEach(file => {
-          if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
-          foldersMap[file.folder].push(file);
-        });
-        console.log("Dossiers trouvés:", Object.keys(foldersMap));
-        const sortMethod = document.getElementById('sortSelect').value;
-        renderFolders(foldersMap, sortMethod);
-        updateFolderSelect(Object.keys(foldersMap));
-        if (currentFolder) {
-          console.log(`Chargement des fichiers pour le dossier: ${currentFolder}`);
-          showFolderFiles(currentFolder, sortMethod);
-        }
-        showLoading(false);
-        if (Object.keys(foldersMap).length === 0) {
-          document.getElementById('foldersContainer').innerHTML = "<p>Aucun dossier trouvé. Créez un dossier pour commencer !</p>";
-        }
-      };
-      request.onerror = () => {
-        console.error("Erreur lors du chargement des dossiers");
-        showLoading(false);
-        alert("Erreur lors du chargement des dossiers");
-      };
-    }
-
-    function renderFolders(foldersMap, sortMethod) {
-      let folders = Object.keys(foldersMap);
-      if (sortMethod === 'recent') {
-        folders.sort((a, b) => {
-          const latestA = Math.max(...foldersMap[a].map(f => f.id));
-          const latestB = Math.max(...foldersMap[b].map(f => f.id));
-          return latestB - latestA;
-        });
-      } else {
-        folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-      }
-      const container = document.getElementById("foldersContainer");
-      container.innerHTML = "";
-      folders.forEach(folder => {
-        const div = document.createElement("div");
-        div.className = `folder-item ${folder === currentFolder ? 'active' : ''}`;
-        div.innerHTML = `<span class="material-icons">folder</span> ${folder}`;
-        div.onclick = () => {
-          currentFolder = folder;
-          console.log(`Clic sur le dossier: ${folder}`);
-          showFolderFiles(folder, sortMethod);
-          document.getElementById('backButton').style.display = 'inline-flex';
-        };
-        container.appendChild(div);
-      });
-      if (!currentFolder) {
-        document.getElementById("filesContainer").innerHTML = "";
-        document.getElementById('backButton').style.display = 'none';
-      }
-    }
-
-    function showFolderFiles(folder, sortMethod) {
-      showLoading(true);
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => {
-        currentFiles = request.result.filter(file => file.folder === folder);
-        console.log(`Fichiers dans ${folder}:`, currentFiles);
-        if (sortMethod === 'recent') {
-          currentFiles.sort((a, b) => b.id - a.id);
-        } else {
-          currentFiles.sort((a, b) => a.name.localeCompare(b.name, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-        }
-        renderFiles(currentFiles, folder);
-        loadFolders();
-        showLoading(false);
-      };
-      request.onerror = () => {
-        console.error(`Erreur lors du chargement des fichiers pour ${folder}`);
-        showLoading(false);
-        alert("Erreur lors du chargement des fichiers");
-      };
-    }
-
-    function generateVideoThumbnail(video, callback) {
-      video.onloadedmetadata = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        video.currentTime = 1;
-        video.onseeked = () => {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          console.log(`Miniature générée pour ${video.src}`);
-          callback(canvas);
-        };
-        video.onerror = () => {
-          console.error(`Erreur lors de la génération de la miniature pour ${video.src}`);
-          callback(null);
-        };
-      };
-      video.onerror = () => {
-        console.error(`Erreur de chargement de la vidéo pour miniature: ${video.src}`);
-        callback(null);
-      };
-    }
-
-    function renderFiles(files, folder) {
-      const container = document.getElementById("filesContainer");
-      container.innerHTML = `<h3><span class="material-icons">folder_open</span> Fichiers dans ${folder}</h3>`;
-      const preview = document.createElement("div");
-      preview.className = "preview";
-      if (files.length === 0) {
-        preview.innerHTML = "<p>Aucun fichier dans ce dossier. Ajoutez des images ou vidéos !</p>";
-      }
-      files.forEach(file => {
-        console.log(`Rendu du fichier: ${file.name}, type: ${file.type}`);
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'inline-block';
-        let element;
-        if (file.type.startsWith('image')) {
-          element = document.createElement('img');
-          element.src = file.data;
-          element.onerror = () => {
-            console.error(`Erreur de chargement de l'image: ${file.name}`);
-            element.replaceWith(document.createElement('p').appendChild(document.createTextNode(`Erreur: ${file.name}`)).parentElement);
-          };
-          element.onclick = () => showFullscreen(file, files.indexOf(file));
-          wrapper.appendChild(element);
-        } else if (file.type.startsWith('video')) {
-          const video = document.createElement('video');
-          video.src = file.data;
-          generateVideoThumbnail(video, (canvas) => {
-            if (canvas) {
-              element = canvas;
-            } else {
-              element = document.createElement('div');
-              element.className = 'video-placeholder';
-              element.innerHTML = `<span class="material-icons">movie</span> ${file.name}`;
-            }
-            element.onclick = () => showFullscreen(file, files.indexOf(file));
-            wrapper.appendChild(element);
-            // Ajouter le bouton de suppression après l'élément
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = '<span class="material-icons">delete</span> Supprimer';
-            delBtn.className = 'file-actions-btn';
-            delBtn.onclick = (e) => {
-              e.stopPropagation();
-              if (confirm("Voulez-vous vraiment supprimer ce fichier ?")) {
-                deleteFile(file.id);
-              }
-            };
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'file-actions';
-            actionsDiv.appendChild(delBtn);
-            wrapper.appendChild(actionsDiv);
-            preview.appendChild(wrapper);
-          });
-        }
-      });
-      container.appendChild(preview);
-    }
-
-    function updateFolderSelect(folders) {
-      const sortMethod = document.getElementById('sortSelect').value;
-      if (sortMethod === 'recent') {
+      try {
+        showLoading(true);
         const tx = db.transaction(STORE_NAME, "readonly");
         const store = tx.objectStore(STORE_NAME);
         const request = store.getAll();
         request.onsuccess = () => {
-          const data = request.result;
+          const data = request.result.filter(file => file.folder && file.data);
+          console.log("Données chargées depuis IndexedDB:", data);
           const foldersMap = {};
           data.forEach(file => {
             if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
             foldersMap[file.folder].push(file);
           });
-          folders = Object.keys(foldersMap).sort((a, b) => {
-            const latestA = Math.max(...foldersMap[a].map(f => f.id));
-            const latestB = Math.max(...foldersMap[b].map(f => f.id));
+          console.log("Dossiers trouvés:", Object.keys(foldersMap));
+          const sortMethod = document.getElementById('sortSelect').value;
+          renderFolders(foldersMap, sortMethod);
+          updateFolderSelect(Object.keys(foldersMap));
+          if (currentFolder) {
+            console.log(`Chargement des fichiers pour le dossier: ${currentFolder}`);
+            showFolderFiles(currentFolder, sortMethod);
+          }
+          showLoading(false);
+          if (Object.keys(foldersMap).length === 0) {
+            document.getElementById('foldersContainer').innerHTML = "<p>Aucun dossier trouvé. Créez un dossier pour commencer !</p>";
+          }
+        };
+        request.onerror = () => {
+          console.error("Erreur lors du chargement des dossiers");
+          showLoading(false);
+          alert("Erreur lors du chargement des dossiers. Vérifiez la console.");
+        };
+      } catch (err) {
+        console.error("Erreur dans loadFolders:", err);
+        showLoading(false);
+        alert("Erreur lors du chargement des dossiers. Vérifiez la console.");
+      }
+    }
+
+    function renderFolders(foldersMap, sortMethod) {
+      try {
+        let folders = Object.keys(foldersMap);
+        if (sortMethod === 'recent') {
+          folders.sort((a, b) => {
+            const latestA = Math.max(...foldersMap[a].map(f => f.id || 0));
+            const latestB = Math.max(...foldersMap[b].map(f => f.id || 0));
             return latestB - latestA;
           });
+        } else {
+          folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+        }
+        const container = document.getElementById("foldersContainer");
+        container.innerHTML = "";
+        folders.forEach(folder => {
+          const div = document.createElement("div");
+          div.className = `folder-item ${folder === currentFolder ? 'active' : ''}`;
+          div.innerHTML = `<span class="material-icons">folder</span> ${folder}`;
+          div.onclick = () => {
+            currentFolder = folder;
+            console.log(`Clic sur le dossier: ${folder}`);
+            showFolderFiles(folder, sortMethod);
+            document.getElementById('backButton').style.display = 'inline-flex';
+          };
+          container.appendChild(div);
+        });
+        if (!currentFolder) {
+          document.getElementById("filesContainer").innerHTML = "";
+          document.getElementById('backButton').style.display = 'none';
+        }
+      } catch (err) {
+        console.error("Erreur dans renderFolders:", err);
+        alert("Erreur lors de l'affichage des dossiers. Vérifiez la console.");
+      }
+    }
+
+    function showFolderFiles(folder, sortMethod) {
+      try {
+        showLoading(true);
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => {
+          currentFiles = request.result.filter(file => file.folder === folder && file.data);
+          console.log(`Fichiers dans ${folder}:`, currentFiles);
+          if (sortMethod === 'recent') {
+            currentFiles.sort((a, b) => (b.id || 0) - (a.id || 0));
+          } else {
+            currentFiles.sort((a, b) => (a.name || "").localeCompare(b.name || "", ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+          }
+          renderFiles(currentFiles, folder);
+          loadFolders();
+          showLoading(false);
+        };
+        request.onerror = () => {
+          console.error(`Erreur lors du chargement des fichiers pour ${folder}`);
+          showLoading(false);
+          alert("Erreur lors du chargement des fichiers. Vérifiez la console.");
+        };
+      } catch (err) {
+        console.error("Erreur dans showFolderFiles:", err);
+        showLoading(false);
+        alert("Erreur lors du chargement des fichiers. Vérifiez la console.");
+      }
+    }
+
+    function generateVideoThumbnail(video, callback) {
+      try {
+        video.onloadedmetadata = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = Math.min(video.videoWidth, 300); // Limiter la taille
+          canvas.height = Math.min(video.videoHeight, 300 * (video.videoHeight / video.videoWidth));
+          video.currentTime = 1;
+          video.onseeked = () => {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            console.log(`Miniature générée pour ${video.src}`);
+            callback(canvas);
+          };
+          video.onerror = () => {
+            console.error(`Erreur lors de la génération de la miniature pour ${video.src}`);
+            callback(null);
+          };
+        };
+        video.onerror = () => {
+          console.error(`Erreur de chargement de la vidéo pour miniature: ${video.src}`);
+          callback(null);
+        };
+      } catch (err) {
+        console.error("Erreur dans generateVideoThumbnail:", err);
+        callback(null);
+      }
+    }
+
+    function renderFiles(files, folder) {
+      try {
+        const container = document.getElementById("filesContainer");
+        container.innerHTML = `<h3><span class="material-icons">folder_open</span> Fichiers dans ${folder}</h3>`;
+        const preview = document.createElement("div");
+        preview.className = "preview";
+        if (files.length === 0) {
+          preview.innerHTML = "<p>Aucun fichier dans ce dossier. Ajoutez des images ou vidéos !</p>";
+        }
+        files.forEach(file => {
+          console.log(`Rendu du fichier: ${file.name || "sans nom"}, type: ${file.type || "inconnu"}`);
+          const wrapper = document.createElement('div');
+          wrapper.style.display = 'inline-block';
+          let element;
+          if ((file.type || "").startsWith('image')) {
+            element = document.createElement('img');
+            element.src = file.data;
+            element.onerror = () => {
+              console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
+              element.replaceWith(document.createElement('p').appendChild(document.createTextNode(`Erreur: ${file.name || "Image inconnue"}`)).parentElement);
+            };
+            element.onclick = () => showFullscreen(file, files.indexOf(file));
+            wrapper.appendChild(element);
+          } else {
+            const video = document.createElement('video');
+            video.src = file.data;
+            generateVideoThumbnail(video, (canvas) => {
+              if (canvas) {
+                element = canvas;
+              } else {
+                element = document.createElement('div');
+                element.className = 'video-placeholder';
+                element.innerHTML = `<span class="material-icons">movie</span> ${file.name || "Vidéo inconnue"}`;
+              }
+              element.onclick = () => showFullscreen(file, files.indexOf(file));
+              wrapper.appendChild(element);
+              // Ajouter le bouton de suppression
+              const delBtn = document.createElement('button');
+              delBtn.innerHTML = '<span class="material-icons">delete</span> Supprimer';
+              delBtn.className = 'file-actions-btn';
+              delBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (confirm("Voulez-vous vraiment supprimer ce fichier ?")) {
+                  deleteFile(file.id);
+                }
+              };
+              const actionsDiv = document.createElement('div');
+              actionsDiv.className = 'file-actions';
+              actionsDiv.appendChild(delBtn);
+              wrapper.appendChild(actionsDiv);
+              preview.appendChild(wrapper);
+            });
+          }
+        });
+        container.appendChild(preview);
+      } catch (err) {
+        console.error("Erreur dans renderFiles:", err);
+        alert("Erreur lors de l'affichage des fichiers. Vérifiez la console.");
+      }
+    }
+
+    function updateFolderSelect(folders) {
+      try {
+        const sortMethod = document.getElementById('sortSelect').value;
+        if (sortMethod === 'recent') {
+          const tx = db.transaction(STORE_NAME, "readonly");
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const data = request.result;
+            const foldersMap = {};
+            data.forEach(file => {
+              if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
+              foldersMap[file.folder].push(file);
+            });
+            folders = Object.keys(foldersMap).sort((a, b) => {
+              const latestA = Math.max(...foldersMap[a].map(f => f.id || 0));
+              const latestB = Math.max(...foldersMap[b].map(f => f.id || 0));
+              return latestB - latestA;
+            });
+            const select = document.getElementById("folderSelect");
+            const currentValue = select.value;
+            select.innerHTML = '<option disabled selected>-- Choisir un dossier --</option>';
+            folders.forEach(f => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              select.appendChild(opt);
+            });
+            if (folders.includes(currentValue)) select.value = currentValue;
+          };
+        } else {
+          folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
           const select = document.getElementById("folderSelect");
           const currentValue = select.value;
           select.innerHTML = '<option disabled selected>-- Choisir un dossier --</option>';
@@ -497,253 +549,293 @@
             select.appendChild(opt);
           });
           if (folders.includes(currentValue)) select.value = currentValue;
-        };
-      } else {
-        folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-        const select = document.getElementById("folderSelect");
-        const currentValue = select.value;
-        select.innerHTML = '<option disabled selected>-- Choisir un dossier --</option>';
-        folders.forEach(f => {
-          const opt = document.createElement('option');
-          opt.value = f;
-          opt.textContent = f;
-          select.appendChild(opt);
-        });
-        if (folders.includes(currentValue)) select.value = currentValue;
+        }
+      } catch (err) {
+        console.error("Erreur dans updateFolderSelect:", err);
+        alert("Erreur lors de la mise à jour des dossiers. Vérifiez la console.");
       }
     }
 
     function createFolder() {
-      const name = document.getElementById('folderName').value.trim();
-      if (!name) {
-        alert("Nom du dossier invalide.");
-        return;
+      try {
+        const name = document.getElementById('folderName').value.trim();
+        if (!name) {
+          alert("Nom du dossier invalide.");
+          return;
+        }
+        const select = document.getElementById('folderSelect');
+        const exists = [...select.options].some(o => o.value.toLowerCase() === name.toLowerCase());
+        if (exists) {
+          alert("Ce dossier existe déjà !");
+          return;
+        }
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const fileRecord = { folder: name, name: `placeholder_${Date.now()}`, type: "text/plain", data: "data:text/plain;base64," };
+        store.add(fileRecord).onsuccess = () => {
+          console.log(`Dossier créé: ${name}`);
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          select.appendChild(opt);
+          select.value = name;
+          loadFolders();
+          document.getElementById('folderName').value = '';
+          alert("Dossier créé avec succès !");
+        };
+      } catch (err) {
+        console.error("Erreur dans createFolder:", err);
+        alert("Erreur lors de la création du dossier. Vérifiez la console.");
       }
-      const select = document.getElementById('folderSelect');
-      const exists = [...select.options].some(o => o.value.toLowerCase() === name.toLowerCase());
-      if (exists) {
-        alert("Ce dossier existe déjà !");
-        return;
-      }
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      const fileRecord = { folder: name, name: `placeholder_${Date.now()}`, type: "text/plain", data: "data:text/plain;base64," };
-      store.add(fileRecord).onsuccess = () => {
-        console.log(`Dossier créé: ${name}`);
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-        select.value = name;
-        loadFolders();
-        document.getElementById('folderName').value = '';
-        alert("Dossier créé avec succès !");
-      };
     }
 
     function addFiles() {
-      const folderName = document.getElementById('folderSelect').value;
-      const files = document.getElementById('fileInput').files;
-      if (!folderName || files.length === 0) {
-        alert("Sélectionne un dossier et des fichiers");
-        return;
-      }
-      showLoading(true);
-      let processed = 0;
-      for (let file of files) {
-        if (!file.type.startsWith('image') && !file.type.startsWith('video')) {
-          console.warn(`Fichier ignoré (type non supporté): ${file.name}`);
-          processed++;
-          if (processed === files.length) showLoading(false);
-          continue;
+      try {
+        const folderName = document.getElementById('folderSelect').value;
+        const files = document.getElementById('fileInput').files;
+        if (!folderName || files.length === 0) {
+          alert("Sélectionne un dossier et des fichiers");
+          return;
         }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          console.log(`Fichier lu: ${file.name}, taille: ${e.target.result.length}`);
-          saveFile(folderName, file, e.target.result);
-          processed++;
-          if (processed === files.length) showLoading(false);
-        };
-        reader.onerror = () => {
-          console.error(`Erreur de lecture du fichier: ${file.name}`);
-          processed++;
-          if (processed === files.length) showLoading(false);
-          alert(`Erreur lors de la lecture du fichier: ${file.name}`);
-        };
-        reader.readAsDataURL(file);
+        showLoading(true);
+        let processed = 0;
+        for (let file of files) {
+          if (!file.type.startsWith('image') && !file.type.startsWith('video')) {
+            console.warn(`Fichier ignoré (type non supporté): ${file.name}`);
+            processed++;
+            if (processed === files.length) showLoading(false);
+            continue;
+          }
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            console.log(`Fichier lu: ${file.name}, taille: ${e.target.result.length}`);
+            saveFile(folderName, file, e.target.result);
+            processed++;
+            if (processed === files.length) showLoading(false);
+          };
+          reader.onerror = () => {
+            console.error(`Erreur de lecture du fichier: ${file.name}`);
+            processed++;
+            if (processed === files.length) showLoading(false);
+            alert(`Erreur lors de la lecture du fichier: ${file.name}`);
+          };
+          reader.readAsDataURL(file);
+        }
+        document.getElementById('fileInput').value = '';
+      } catch (err) {
+        console.error("Erreur dans addFiles:", err);
+        showLoading(false);
+        alert("Erreur lors de l'ajout des fichiers. Vérifiez la console.");
       }
-      document.getElementById('fileInput').value = '';
     }
 
     function deleteFile(id) {
-      showLoading(true);
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      store.delete(id).onsuccess = () => {
-        console.log(`Fichier supprimé: ID ${id}`);
-        const sortMethod = document.getElementById('sortSelect').value;
-        if (currentFolder) showFolderFiles(currentFolder, sortMethod);
-        loadFolders();
+      try {
+        showLoading(true);
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.delete(id).onsuccess = () => {
+          console.log(`Fichier supprimé: ID ${id}`);
+          const sortMethod = document.getElementById('sortSelect').value;
+          if (currentFolder) showFolderFiles(currentFolder, sortMethod);
+          loadFolders();
+          showLoading(false);
+          alert("Fichier supprimé avec succès !");
+        };
+      } catch (err) {
+        console.error("Erreur dans deleteFile:", err);
         showLoading(false);
-        alert("Fichier supprimé avec succès !");
-      };
+        alert("Erreur lors de la suppression du fichier. Vérifiez la console.");
+      }
     }
 
     function exportData() {
-      showLoading(true);
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const data = request.result.filter(file => !file.name.startsWith('placeholder_'));
-        console.log("Données exportées:", data);
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `filemanager_backup_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+      try {
+        showLoading(true);
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const data = request.result.filter(file => !file.name.startsWith('placeholder_'));
+          console.log("Données exportées:", data);
+          const json = JSON.stringify(data, null, 2);
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `filemanager_backup_${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showLoading(false);
+          alert("Données exportées avec succès !");
+        };
+      } catch (err) {
+        console.error("Erreur dans exportData:", err);
         showLoading(false);
-        alert("Données exportées avec succès !");
-      };
+        alert("Erreur lors de l'exportation. Vérifiez la console.");
+      }
     }
 
     function importData(event) {
-      const file = event.target.files[0];
-      if (!file || !file.name.endsWith('.json')) {
-        alert("Veuillez sélectionner un fichier JSON valide.");
-        return;
-      }
-      showLoading(true);
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (!Array.isArray(data)) throw new Error("Format JSON invalide");
-          console.log("Données importées:", data);
-          const tx = db.transaction(STORE_NAME, "readwrite");
-          const store = tx.objectStore(STORE_NAME);
-          let processed = 0;
-          data.forEach(record => {
-            if (record.folder && record.name && record.type && record.data) {
-              store.put(record).onsuccess = () => {
+      try {
+        const file = event.target.files[0];
+        if (!file || !file.name.endsWith('.json')) {
+          alert("Veuillez sélectionner un fichier JSON valide.");
+          return;
+        }
+        showLoading(true);
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data)) throw new Error("Format JSON invalide");
+            console.log("Données importées:", data);
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
+            let processed = 0;
+            data.forEach(record => {
+              if (record.folder && record.data) {
+                store.put(record).onsuccess = () => {
+                  processed++;
+                  if (processed === data.length) {
+                    loadFolders();
+                    showLoading(false);
+                    alert("Données importées avec succès !");
+                  }
+                };
+              } else {
+                console.warn("Enregistrement invalide ignoré:", record);
                 processed++;
                 if (processed === data.length) {
                   loadFolders();
                   showLoading(false);
-                  alert("Données importées avec succès !");
+                  alert("Données importées, mais certaines entrées étaient invalides.");
                 }
-              };
-            } else {
-              console.warn("Enregistrement invalide ignoré:", record);
-              processed++;
-              if (processed === data.length) {
-                loadFolders();
-                showLoading(false);
-                alert("Données importées, mais certaines entrées étaient invalides.");
               }
-            }
-          });
-        } catch (err) {
-          console.error("Erreur lors de l'importation:", err);
-          showLoading(false);
-          alert("Erreur lors de l'importation : " + err.message);
-        }
-      };
-      reader.readAsText(file);
-      document.getElementById('importInput').value = '';
+            });
+          } catch (err) {
+            console.error("Erreur lors de l'importation:", err);
+            showLoading(false);
+            alert("Erreur lors de l'importation : " + err.message);
+          }
+        };
+        reader.readAsText(file);
+        document.getElementById('importInput').value = '';
+      } catch (err) {
+        console.error("Erreur dans importData:", err);
+        showLoading(false);
+        alert("Erreur lors de l'importation. Vérifiez la console.");
+      }
     }
 
     function showFullscreen(file, index) {
-      currentFileIndex = index;
-      const overlay = document.getElementById('fullscreenViewer');
-      overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia">&larr;</button><button id="nextMedia">&rarr;</button></div>';
-      let element;
-      if (file.type.startsWith('image')) {
-        element = document.createElement('img');
-        element.src = file.data;
-        element.onerror = () => {
-          console.error(`Erreur de chargement de l'image: ${file.name}`);
-          alert(`Erreur de chargement de l'image: ${file.name}`);
-        };
-      } else if (file.type.startsWith('video')) {
-        const player = document.createElement('div');
-        player.className = 'video-player';
-        const video = document.createElement('video');
-        video.src = file.data;
-        video.setAttribute('playsinline', '');
-        video.addEventListener('error', (e) => {
-          console.error(`Erreur de chargement de la vidéo en plein écran: ${file.name}`, e);
-          alert(`Erreur de chargement de la vidéo: ${file.name}`);
-        });
-        player.appendChild(video);
-        const controls = document.createElement('div');
-        controls.className = 'video-controls';
-        controls.innerHTML = `
-          <button onclick="this.parentElement.parentElement.querySelector('video').paused ? this.parentElement.parentElement.querySelector('video').play() : this.parentElement.parentElement.querySelector('video').pause(); this.querySelector('span').textContent = this.parentElement.parentElement.querySelector('video').paused ? 'play_arrow' : 'pause';">
-            <span class="material-icons">play_arrow</span>
-          </button>
-          <input type="range" min="0" max="100" value="0" class="progress">
-          <input type="range" min="0" max="1" step="0.1" value="1" class="volume">
-          <select class="speed">
-            <option value="0.5">0.5x</option>
-            <option value="1" selected>1x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2">2x</option>
-          </select>
-          <button onclick="if (document.fullscreenElement) document.exitFullscreen(); else this.parentElement.parentElement.querySelector('video').requestFullscreen();">
-            <span class="material-icons">fullscreen</span>
-          </button>
-        `;
-        player.appendChild(controls);
-        video.addEventListener('timeupdate', () => {
-          const progress = controls.querySelector('.progress');
-          progress.value = (video.currentTime / video.duration) * 100;
-        });
-        controls.querySelector('.progress').addEventListener('input', (e) => {
-          video.currentTime = (e.target.value / 100) * video.duration;
-        });
-        controls.querySelector('.volume').addEventListener('input', (e) => {
-          video.volume = e.target.value;
-        });
-        controls.querySelector('.speed').addEventListener('change', (e) => {
-          video.playbackRate = parseFloat(e.target.value);
-        });
-        element = player;
+      try {
+        currentFileIndex = index;
+        const overlay = document.getElementById('fullscreenViewer');
+        overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia">&larr;</button><button id="nextMedia">&rarr;</button></div>';
+        let element;
+        if ((file.type || "").startsWith('image')) {
+          element = document.createElement('img');
+          element.src = file.data;
+          element.onerror = () => {
+            console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
+            alert(`Erreur de chargement de l'image: ${file.name || "Image inconnue"}`);
+          };
+        } else {
+          const player = document.createElement('div');
+          player.className = 'video-player';
+          const video = document.createElement('video');
+          video.src = file.data;
+          video.setAttribute('playsinline', '');
+          video.addEventListener('error', (e) => {
+            console.error(`Erreur de chargement de la vidéo en plein écran: ${file.name || "sans nom"}`, e);
+            alert(`Erreur de chargement de la vidéo: ${file.name || "Vidéo inconnue"}`);
+          });
+          player.appendChild(video);
+          const controls = document.createElement('div');
+          controls.className = 'video-controls';
+          controls.innerHTML = `
+            <button onclick="this.parentElement.parentElement.querySelector('video').paused ? this.parentElement.parentElement.querySelector('video').play() : this.parentElement.parentElement.querySelector('video').pause(); this.querySelector('span').textContent = this.parentElement.parentElement.querySelector('video').paused ? 'play_arrow' : 'pause';">
+              <span class="material-icons">play_arrow</span>
+            </button>
+            <input type="range" min="0" max="100" value="0" class="progress">
+            <input type="range" min="0" max="1" step="0.1" value="1" class="volume">
+            <select class="speed">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+            <button onclick="if (document.fullscreenElement) document.exitFullscreen(); else this.parentElement.parentElement.querySelector('video').requestFullscreen();">
+              <span class="material-icons">fullscreen</span>
+            </button>
+          `;
+          player.appendChild(controls);
+          video.addEventListener('timeupdate', () => {
+            const progress = controls.querySelector('.progress');
+            progress.value = (video.currentTime / video.duration) * 100;
+          });
+          controls.querySelector('.progress').addEventListener('input', (e) => {
+            video.currentTime = (e.target.value / 100) * video.duration;
+          });
+          controls.querySelector('.volume').addEventListener('input', (e) => {
+            video.volume = e.target.value;
+          });
+          controls.querySelector('.speed').addEventListener('change', (e) => {
+            video.playbackRate = parseFloat(e.target.value);
+          });
+          element = player;
+        }
+        overlay.appendChild(element);
+        overlay.style.display = 'flex';
+        document.getElementById('prevMedia').style.display = 'none';
+        document.getElementById('nextMedia').style.display = 'none';
+      } catch (err) {
+        console.error("Erreur dans showFullscreen:", err);
+        alert("Erreur lors de l'affichage en plein écran. Vérifiez la console.");
       }
-      overlay.appendChild(element);
-      overlay.style.display = 'flex';
-      document.getElementById('prevMedia').style.display = 'none';
-      document.getElementById('nextMedia').style.display = 'none';
     }
 
     function handleNavigation(event) {
-      if (event.target.id === 'fullscreenViewer' || event.target.tagName === 'IMG' || event.target.tagName === 'VIDEO') {
-        const rect = event.target.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const width = rect.width;
-        if (clickX < width / 2 && currentFileIndex > 0) {
-          console.log(`Navigation vers le fichier précédent: ${currentFiles[currentFileIndex - 1].name}`);
-          showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
-        } else if (clickX >= width / 2 && currentFileIndex < currentFiles.length - 1) {
-          console.log(`Navigation vers le fichier suivant: ${currentFiles[currentFileIndex + 1].name}`);
-          showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
+      try {
+        if (event.target.id === 'fullscreenViewer' || event.target.tagName === 'IMG' || event.target.tagName === 'VIDEO') {
+          const rect = event.target.getBoundingClientRect();
+          const clickX = event.clientX - rect.left;
+          const width = rect.width;
+          if (clickX < width / 2 && currentFileIndex > 0) {
+            console.log(`Navigation vers le fichier précédent: ${currentFiles[currentFileIndex - 1].name || "sans nom"}`);
+            showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
+          } else if (clickX >= width / 2 && currentFileIndex < currentFiles.length - 1) {
+            console.log(`Navigation vers le fichier suivant: ${currentFiles[currentFileIndex + 1].name || "sans nom"}`);
+            showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
+          }
         }
+      } catch (err) {
+        console.error("Erreur dans handleNavigation:", err);
+        alert("Erreur lors de la navigation. Vérifiez la console.");
       }
     }
 
     function hideFullscreen() {
-      const overlay = document.getElementById('fullscreenViewer');
-      overlay.style.display = 'none';
-      overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia" style="display: none;">&larr;</button><button id="nextMedia" style="display: none;">&rarr;</button></div>';
-      currentFileIndex = -1;
+      try {
+        const overlay = document.getElementById('fullscreenViewer');
+        overlay.style.display = 'none';
+        overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia" style="display: none;">&larr;</button><button id="nextMedia" style="display: none;">&rarr;</button></div>';
+        currentFileIndex = -1;
+      } catch (err) {
+        console.error("Erreur dans hideFullscreen:", err);
+        alert("Erreur lors de la fermeture du plein écran. Vérifiez la console.");
+      }
     }
 
     function goBack() {
-      currentFolder = null;
-      loadFolders();
+      try {
+        currentFolder = null;
+        loadFolders();
+      } catch (err) {
+        console.error("Erreur dans goBack:", err);
+        alert("Erreur lors du retour. Vérifiez la console.");
+      }
     }
 
     document.getElementById('fullscreenViewer').addEventListener('click', handleNavigation);
