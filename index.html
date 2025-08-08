@@ -150,6 +150,11 @@
       <option disabled selected>-- Choisir un dossier --</option>
     </select>
     <input type="file" id="fileInput" multiple accept="image/*,video/*" />
+    <label for="sortSelect">Trier :</label>
+    <select id="sortSelect" onchange="loadFolders()">
+      <option value="alpha">Ordre alphabétique</option>
+      <option value="recent">Récent</option>
+    </select>
     <button onclick="addFiles()">Ajouter</button>
   </div>
   <div class="section">
@@ -163,6 +168,7 @@
     const DB_VERSION = 1;
     const STORE_NAME = "files";
     let db;
+    let currentFolder = null;
 
     function openDB() {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -197,32 +203,50 @@
           if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
           foldersMap[file.folder].push(file);
         });
-        renderFolders(Object.keys(foldersMap));
+        const sortMethod = document.getElementById('sortSelect').value;
+        renderFolders(foldersMap, sortMethod);
         updateFolderSelect(Object.keys(foldersMap));
+        if (currentFolder) showFolderFiles(currentFolder, sortMethod); // Refresh current folder view
       };
     }
 
-    function renderFolders(folders) {
-      folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+    function renderFolders(foldersMap, sortMethod) {
+      let folders = Object.keys(foldersMap);
+      if (sortMethod === 'recent') {
+        folders.sort((a, b) => {
+          const latestA = Math.max(...foldersMap[a].map(f => f.id));
+          const latestB = Math.max(...foldersMap[b].map(f => f.id));
+          return latestB - latestA;
+        });
+      } else {
+        folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+      }
       const container = document.getElementById("foldersContainer");
       container.innerHTML = "";
       folders.forEach(folder => {
         const div = document.createElement("div");
         div.className = "folder-item";
         div.textContent = folder;
-        div.onclick = () => showFolderFiles(folder);
+        div.onclick = () => {
+          currentFolder = folder;
+          showFolderFiles(folder, sortMethod);
+        };
         container.appendChild(div);
       });
-      document.getElementById("filesContainer").innerHTML = ""; // Clear files on homepage
+      if (!currentFolder) document.getElementById("filesContainer").innerHTML = ""; // Clear files if no folder selected
     }
 
-    function showFolderFiles(folder) {
+    function showFolderFiles(folder, sortMethod) {
       const tx = db.transaction(STORE_NAME, "readonly");
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        const files = request.result.filter(file => file.folder === folder);
-        files.sort((a, b) => a.name.localeCompare(b.name, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+        let files = request.result.filter(file => file.folder === folder);
+        if (sortMethod === 'recent') {
+          files.sort((a, b) => b.id - a.id);
+        } else {
+          files.sort((a, b) => a.name.localeCompare(b.name, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+        }
         renderFiles(files, folder);
       };
     }
@@ -265,17 +289,47 @@
     }
 
     function updateFolderSelect(folders) {
-      folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-      const select = document.getElementById("folderSelect");
-      const currentValue = select.value;
-      select.innerHTML = '<option disabled>-- Choisir un dossier --</option>';
-      folders.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f;
-        opt.textContent = f;
-        select.appendChild(opt);
-      });
-      if (folders.includes(currentValue)) select.value = currentValue;
+      const sortMethod = document.getElementById('sortSelect').value;
+      if (sortMethod === 'recent') {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const data = request.result;
+          const foldersMap = {};
+          data.forEach(file => {
+            if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
+            foldersMap[file.folder].push(file);
+          });
+          folders = Object.keys(foldersMap).sort((a, b) => {
+            const latestA = Math.max(...foldersMap[a].map(f => f.id));
+            const latestB = Math.max(...foldersMap[b].map(f => f.id));
+            return latestB - latestA;
+          });
+          const select = document.getElementById("folderSelect");
+          const currentValue = select.value;
+          select.innerHTML = '<option disabled>-- Choisir un dossier --</option>';
+          folders.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            select.appendChild(opt);
+          });
+          if (folders.includes(currentValue)) select.value = currentValue;
+        };
+      } else {
+        folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+        const select = document.getElementById("folderSelect");
+        const currentValue = select.value;
+        select.innerHTML = '<option disabled>-- Choisir un dossier --</option>';
+        folders.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f;
+          opt.textContent = f;
+          select.appendChild(opt);
+        });
+        if (folders.includes(currentValue)) select.value = currentValue;
+      }
     }
 
     function createFolder() {
@@ -289,7 +343,7 @@
         opt.textContent = name;
         select.appendChild(opt);
         select.value = name;
-        loadFolders(); // Refresh folder list
+        loadFolders();
       }
       document.getElementById('folderName').value = '';
     }
@@ -299,7 +353,7 @@
       const files = document.getElementById('fileInput').files;
       if (!folderName || files.length === 0) return alert("Sélectionne un dossier et des fichiers");
       for (let file of files) {
-        if (!file.type.startsWith('image') && !file.type.startsWith('video')) continue; // Only images/videos
+        if (!file.type.startsWith('image') && !file.type.startsWith('video')) continue;
         const reader = new FileReader();
         reader.onload = function(e) {
           saveFile(folderName, file, e.target.result);
@@ -313,8 +367,8 @@
       const tx = db.transaction(STORE_NAME, "readwrite");
       const store = tx.objectStore(STORE_NAME);
       store.delete(id).onsuccess = () => {
-        const currentFolder = document.getElementById("filesContainer").querySelector('h3')?.textContent.replace('Fichiers dans ', '');
-        if (currentFolder) showFolderFiles(currentFolder);
+        const sortMethod = document.getElementById('sortSelect').value;
+        if (currentFolder) showFolderFiles(currentFolder, sortMethod);
         loadFolders();
       };
     }
