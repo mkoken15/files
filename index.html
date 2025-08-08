@@ -31,7 +31,7 @@
     }
     input, select, button {
       padding: 10px;
-      margin: 8px 0;
+      margin: 8px 4px;
       border-radius: 8px;
       border: 1px solid #d0d7de;
       font-size: 1rem;
@@ -96,6 +96,9 @@
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    .preview video {
+      display: block;
+    }
     .preview img:hover, .preview video:hover {
       transform: scale(1.05);
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
@@ -127,24 +130,7 @@
       box-shadow: 0 0 20px rgba(255,255,255,0.3);
     }
     .nav-arrows {
-      position: absolute;
-      top: 50%;
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      padding: 0 20px;
-      transform: translateY(-50%);
-    }
-    .nav-arrows button {
-      background: rgba(255,255,255,0.2);
-      font-size: 2rem;
-      padding: 10px;
-      border: none;
-      color: white;
-      cursor: pointer;
-    }
-    .nav-arrows button:hover {
-      background: rgba(255,255,255,0.3);
+      display: none; /* Masquer les flèches par défaut */
     }
     .loading {
       position: fixed;
@@ -213,8 +199,8 @@
   </div>
   <div id="fullscreenViewer">
     <div class="nav-arrows">
-      <button id="prevMedia" style="display: none;">&larr;</button>
-      <button id="nextMedia" style="display: none;">&rarr;</button>
+      <button id="prevMedia">&larr;</button>
+      <button id="nextMedia">&rarr;</button>
     </div>
   </div>
   <div id="loading" class="loading">Chargement...</div>
@@ -264,7 +250,7 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        const data = request.result.filter(file => file.folder && file.name && file.data); // Filtrer les données invalides
+        const data = request.result.filter(file => file.folder && file.name && file.data);
         const foldersMap = {};
         data.forEach(file => {
           if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
@@ -275,7 +261,7 @@
         updateFolderSelect(Object.keys(foldersMap));
         if (currentFolder) showFolderFiles(currentFolder, sortMethod);
         showLoading(false);
-        if (data.length === 0) {
+        if (Object.keys(foldersMap).length === 0) {
           document.getElementById('foldersContainer').innerHTML = "<p>Aucun dossier trouvé. Créez un dossier pour commencer !</p>";
         }
       };
@@ -350,6 +336,8 @@
           element = document.createElement('video');
           element.src = file.data;
           element.controls = true;
+          element.muted = true; // Pour éviter les erreurs d'autoplay
+          element.preload = 'metadata'; // Améliore le chargement
         }
         if (element) {
           element.onclick = () => showFullscreen(file, files.indexOf(file));
@@ -421,24 +409,40 @@
 
     function createFolder() {
       const name = document.getElementById('folderName').value.trim();
-      if (!name) return alert("Nom du dossier invalide.");
+      if (!name) {
+        alert("Nom du dossier invalide.");
+        return;
+      }
       const select = document.getElementById('folderSelect');
-      const exists = [...select.options].some(o => o.value === name);
-      if (exists) return alert("Ce dossier existe déjà !");
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      select.appendChild(opt);
-      select.value = name;
-      loadFolders();
-      document.getElementById('folderName').value = '';
-      alert("Dossier créé avec succès !");
+      const exists = [...select.options].some(o => o.value.toLowerCase() === name.toLowerCase());
+      if (exists) {
+        alert("Ce dossier existe déjà !");
+        return;
+      }
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      // Ajouter un enregistrement vide pour créer le dossier
+      const fileRecord = { folder: name, name: `placeholder_${Date.now()}`, type: "text/plain", data: "data:text/plain;base64," };
+      store.add(fileRecord).onsuccess = () => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+        select.value = name;
+        loadFolders();
+        document.getElementById('folderName').value = '';
+        alert("Dossier créé avec succès !");
+      };
+      store.delete(fileRecord.id);
     }
 
     function addFiles() {
       const folderName = document.getElementById('folderSelect').value;
       const files = document.getElementById('fileInput').files;
-      if (!folderName || files.length === 0) return alert("Sélectionne un dossier et des fichiers");
+      if (!folderName || files.length === 0) {
+        alert("Sélectionne un dossier et des fichiers");
+        return;
+      }
       showLoading(true);
       let processed = 0;
       for (let file of files) {
@@ -493,7 +497,10 @@
 
     function importData(event) {
       const file = event.target.files[0];
-      if (!file || !file.name.endsWith('.json')) return alert("Veuillez sélectionner un fichier JSON valide.");
+      if (!file || !file.name.endsWith('.json')) {
+        alert("Veuillez sélectionner un fichier JSON valide.");
+        return;
+      }
       showLoading(true);
       const reader = new FileReader();
       reader.onload = function(e) {
@@ -543,20 +550,14 @@
         element = document.createElement('video');
         element.src = file.data;
         element.controls = true;
-        element.autoplay = true;
+        element.autoplay = false; // Désactiver autoplay pour éviter les erreurs
+        element.muted = true; // Muted pour compatibilité
       }
       overlay.appendChild(element);
       overlay.style.display = 'flex';
-      document.getElementById('prevMedia').style.display = index > 0 ? 'block' : 'none';
-      document.getElementById('nextMedia').style.display = index < currentFiles.length - 1 ? 'block' : 'none';
-      document.getElementById('prevMedia').onclick = (e) => {
-        e.stopPropagation();
-        if (currentFileIndex > 0) showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
-      };
-      document.getElementById('nextMedia').onclick = (e) => {
-        e.stopPropagation();
-        if (currentFileIndex < currentFiles.length - 1) showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
-      };
+      // Masquer les flèches
+      document.getElementById('prevMedia').style.display = 'none';
+      document.getElementById('nextMedia').style.display = 'none';
     }
 
     function hideFullscreen() {
