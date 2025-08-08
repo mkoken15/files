@@ -2,122 +2,147 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Gestionnaire de Fichiers Local (IndexedDB)</title>
+  <title>Gestionnaire de Fichiers Local</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background-color: #f5f7fa;
-      padding: 20px;
+    :root {
+      --primary: #1a3c34;
+      --primary-dark: #0f2b24;
+      --secondary: #2e6b5e;
+      --background: #f7f9fc;
+      --card-bg: #ffffff;
+      --text: #2d3748;
+      --error: #e53e3e;
+      --shadow: 0 4px 20px rgba(0,0,0,0.1);
+      --border-radius: 12px;
+    }
+    * {
+      box-sizing: border-box;
       margin: 0;
-      color: #333;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--background);
+      color: var(--text);
+      padding: 20px;
+      line-height: 1.5;
     }
     h1, h2 {
-      color: #1a3c34;
-      margin: 0 0 10px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.8rem;
     }
     .section {
-      background: #ffffff;
+      background: var(--card-bg);
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
       margin-bottom: 20px;
-      transition: transform 0.2s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     .section:hover {
-      transform: translateY(-2px);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     }
     input, select, button {
-      padding: 10px;
+      padding: 12px;
       margin: 8px 4px;
       border-radius: 8px;
-      border: 1px solid #d0d7de;
+      border: 1px solid #e2e8f0;
       font-size: 1rem;
-      transition: border-color 0.3s ease;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
     input:focus, select:focus {
       outline: none;
-      border-color: #1a3c34;
-      box-shadow: 0 0 5px rgba(26, 60, 52, 0.3);
+      border-color: var(--primary);
+      box-shadow: 0 0 8px rgba(26, 60, 52, 0.2);
     }
     button {
-      background-color: #1a3c34;
+      background: var(--primary);
       color: white;
       border: none;
       cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.1s ease;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
+      transition: background 0.3s ease, transform 0.2s ease;
     }
     button:hover {
-      background-color: #2e6b5e;
-      transform: translateY(-1px);
+      background: var(--secondary);
+      transform: translateY(-2px);
     }
     button:active {
       transform: translateY(0);
     }
     .folder-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
     }
     .folder-item {
-      background: #e8ecef;
+      background: #edf2f7;
       padding: 15px;
       border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.2s ease;
       display: flex;
       align-items: center;
       gap: 8px;
+      transition: all 0.3s ease;
     }
     .folder-item:hover {
-      background-color: #d0d7de;
+      background: #e2e8f0;
       transform: translateY(-2px);
     }
     .folder-item.active {
-      background-color: #1a3c34;
+      background: var(--primary);
       color: white;
     }
     .preview {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 15px;
-      margin-top: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 15px;
     }
     .preview img, .preview canvas, .preview .video-placeholder {
       width: 100%;
-      max-height: 150px;
+      max-height: 140px;
       object-fit: cover;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     .preview .video-placeholder {
-      background: #000;
+      background: #1a202c;
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
-      font-size: 1rem;
+      font-size: 0.9rem;
       text-align: center;
       padding: 10px;
     }
     .preview img:hover, .preview canvas:hover, .preview .video-placeholder:hover {
       transform: scale(1.05);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      box-shadow: var(--shadow);
     }
     .file-actions button {
-      background-color: #d32f2f;
-      padding: 6px 10px;
-      border-radius: 6px;
+      background: var(--error);
+      padding: 8px 12px;
+      border-radius: 8px;
       font-size: 0.9rem;
     }
     .file-actions button:hover {
-      background-color: #b71c1c;
+      background: #c53030;
     }
     #fullscreenViewer {
       position: fixed;
@@ -128,8 +153,8 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 9999;
-      cursor: pointer;
+      z-index: 10000;
+      cursor: default;
     }
     #fullscreenViewer img, #fullscreenViewer .video-player {
       max-width: 90vw;
@@ -137,20 +162,61 @@
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(255,255,255,0.3);
     }
+    .close-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .close-button:hover {
+      background: var(--error);
+    }
     .nav-arrows {
-      display: none; /* Flèches invisibles */
+      display: none;
     }
     .loading {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.8);
       color: white;
-      padding: 10px 20px;
+      padding: 12px 24px;
       border-radius: 8px;
       display: none;
-      z-index: 10000;
+      z-index: 10001;
+      font-size: 1rem;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--error);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: none;
+      z-index: 10002;
+      animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s forwards;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(100px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateY(0); opacity: 1; }
+      to { transform: translateY(100px); opacity: 0; }
     }
     .video-player {
       position: relative;
@@ -165,30 +231,34 @@
     }
     .video-controls {
       position: absolute;
-      bottom: 10px;
-      width: 100%;
-      background: rgba(0,0,0,0.7);
+      bottom: 15px;
+      width: 90%;
+      background: rgba(0,0,0,0.8);
       padding: 10px;
       border-radius: 8px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       color: white;
+      box-shadow: var(--shadow);
     }
     .video-controls button {
       background: none;
       color: white;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       padding: 5px;
     }
     .video-controls input[type="range"] {
       width: 100%;
-      max-width: 200px;
+      max-width: 250px;
+      cursor: pointer;
     }
     .video-controls select {
-      background: #1a3c34;
+      background: var(--primary);
       color: white;
       border: none;
+      padding: 8px;
+      border-radius: 6px;
     }
     @media (max-width: 600px) {
       .folder-list {
@@ -198,49 +268,59 @@
         grid-template-columns: 1fr;
       }
       .preview img, .preview canvas, .preview .video-placeholder {
-        max-height: 200px;
+        max-height: 180px;
       }
       input, select, button {
         width: 100%;
-        padding: 12px;
+        padding: 14px;
         font-size: 1.1rem;
       }
-      h1, h2 {
-        font-size: 1.4rem;
+      h1 {
+        font-size: 1.5rem;
+      }
+      h2 {
+        font-size: 1.2rem;
       }
       .folder-item {
         padding: 12px;
       }
       .video-controls {
         flex-wrap: wrap;
+        gap: 8px;
       }
       .video-controls input[type="range"] {
         max-width: 100%;
+      }
+      .close-button {
+        top: 15px;
+        right: 15px;
+        width: 36px;
+        height: 36px;
       }
     }
   </style>
 </head>
 <body>
-  <h1><span class="material-icons">folder</span> Gestionnaire de Fichiers Local</h1>
+  <h1><span class="material-icons">folder</span> Gestionnaire de Fichiers</h1>
   <div class="section">
     <h2>Créer un dossier</h2>
-    <input type="text" id="folderName" placeholder="Entrez le nom du dossier" />
+    <input type="text" id="folderName" placeholder="Nom du dossier" aria-label="Nom du dossier" />
     <button onclick="createFolder()"><span class="material-icons">create_new_folder</span> Créer</button>
   </div>
   <div class="section">
     <h2>Ajouter des fichiers</h2>
-    <select id="folderSelect">
+    <select id="folderSelect" aria-label="Sélectionner un dossier">
       <option disabled selected>-- Choisir un dossier --</option>
     </select>
-    <input type="file" id="fileInput" multiple accept="image/*,video/*" />
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" aria-label="Ajouter des fichiers" />
     <label for="sortSelect">Trier :</label>
-    <select id="sortSelect" onchange="loadFolders()">
+    <select id="sortSelect" onchange="loadFolders()" aria-label="Trier les fichiers">
       <option value="alpha">Ordre alphabétique</option>
       <option value="recent">Récent</option>
     </select>
     <button onclick="addFiles()"><span class="material-icons">upload_file</span> Ajouter</button>
     <button onclick="exportData()"><span class="material-icons">download</span> Exporter</button>
-    <input type="file" id="importInput" accept=".json" style="display: none;" />
+    <input type="file" id="importInput" accept=".json" style="display: none;" aria-label="Importer un fichier JSON" />
     <button onclick="document.getElementById('importInput').click()"><span class="material-icons">upload</span> Importer</button>
   </div>
   <div class="section">
@@ -251,41 +331,76 @@
   </div>
   <div id="fullscreenViewer"></div>
   <div id="loading" class="loading">Chargement...</div>
+  <div id="toast" class="toast"></div>
   <script>
     const DB_NAME = "FileManagerDB";
     const DB_VERSION = 1;
     const STORE_NAME = "files";
+    const THUMBNAIL_STORE = "thumbnails";
     let db;
     let currentFolder = null;
     let currentFiles = [];
     let currentFileIndex = -1;
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
 
     function openDB() {
       try {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onerror = () => {
           console.error("Erreur d'accès à IndexedDB");
-          alert("Erreur d'accès à la base de données. Vérifiez la console pour plus de détails.");
+          showToast("Erreur d'accès à la base de données.");
         };
         request.onupgradeneeded = (event) => {
           db = event.target.result;
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
           }
+          if (!db.objectStoreNames.contains(THUMBNAIL_STORE)) {
+            db.createObjectStore(THUMBNAIL_STORE, { keyPath: "id" });
+          }
         };
         request.onsuccess = (event) => {
           db = event.target.result;
-          console.log("Base de données ouverte avec succès");
+          console.log("Base de données ouverte");
           loadFolders();
         };
       } catch (err) {
-        console.error("Erreur lors de l'ouverture de la base de données:", err);
-        alert("Erreur critique lors du chargement. Vérifiez la console.");
+        console.error("Erreur dans openDB:", err);
+        showToast("Erreur critique au démarrage.");
       }
     }
 
-    function showLoading(show) {
-      document.getElementById('loading').style.display = show ? 'block' : 'none';
+    function saveThumbnail(id, thumbnailData) {
+      try {
+        const tx = db.transaction(THUMBNAIL_STORE, "readwrite");
+        const store = tx.objectStore(THUMBNAIL_STORE);
+        store.put({ id, data: thumbnailData });
+      } catch (err) {
+        console.error("Erreur lors de l'enregistrement de la miniature:", err);
+      }
+    }
+
+    function getThumbnail(id, callback) {
+      try {
+        const tx = db.transaction(THUMBNAIL_STORE, "readonly");
+        const store = tx.objectStore(THUMBNAIL_STORE);
+        const request = store.get(id);
+        request.onsuccess = () => callback(request.result ? request.result.data : null);
+        request.onerror = () => callback(null);
+      } catch (err) {
+        console.error("Erreur lors de la récupération de la miniature:", err);
+        callback(null);
+      }
     }
 
     function saveFile(folder, file, dataURL) {
@@ -294,22 +409,22 @@
         const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
         const fileRecord = { folder, name: file.name, type: file.type || "unknown", data: dataURL };
-        console.log(`Enregistrement du fichier: ${file.name} dans ${folder}`);
-        store.add(fileRecord).onsuccess = () => {
-          console.log(`Fichier ${file.name} ajouté avec succès`);
+        console.log(`Enregistrement: ${file.name} dans ${folder}`);
+        store.add(fileRecord).onsuccess = (event) => {
+          console.log(`Fichier ${file.name} ajouté, ID: ${event.target.result}`);
           loadFolders();
           showLoading(false);
-          alert("Fichier ajouté avec succès !");
+          showToast("Fichier ajouté avec succès !");
         };
         store.add(fileRecord).onerror = (e) => {
-          console.error(`Erreur lors de l'ajout du fichier ${file.name}:`, e);
+          console.error(`Erreur lors de l'ajout de ${file.name}:`, e);
           showLoading(false);
-          alert(`Erreur lors de l'ajout du fichier ${file.name}`);
+          showToast(`Erreur lors de l'ajout de ${file.name}`);
         };
       } catch (err) {
-        console.error("Erreur lors de l'enregistrement du fichier:", err);
+        console.error("Erreur dans saveFile:", err);
         showLoading(false);
-        alert("Erreur lors de l'enregistrement. Vérifiez la console.");
+        showToast("Erreur lors de l'enregistrement.");
       }
     }
 
@@ -321,20 +436,17 @@
         const request = store.getAll();
         request.onsuccess = () => {
           const data = request.result.filter(file => file.folder && file.data);
-          console.log("Données chargées depuis IndexedDB:", data);
+          console.log("Données chargées:", data);
           const foldersMap = {};
           data.forEach(file => {
             if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
             foldersMap[file.folder].push(file);
           });
-          console.log("Dossiers trouvés:", Object.keys(foldersMap));
+          console.log("Dossiers:", Object.keys(foldersMap));
           const sortMethod = document.getElementById('sortSelect').value;
           renderFolders(foldersMap, sortMethod);
           updateFolderSelect(Object.keys(foldersMap));
-          if (currentFolder) {
-            console.log(`Chargement des fichiers pour le dossier: ${currentFolder}`);
-            showFolderFiles(currentFolder, sortMethod);
-          }
+          if (currentFolder) showFolderFiles(currentFolder, sortMethod);
           showLoading(false);
           if (Object.keys(foldersMap).length === 0) {
             document.getElementById('foldersContainer').innerHTML = "<p>Aucun dossier trouvé. Créez un dossier pour commencer !</p>";
@@ -343,12 +455,12 @@
         request.onerror = () => {
           console.error("Erreur lors du chargement des dossiers");
           showLoading(false);
-          alert("Erreur lors du chargement des dossiers. Vérifiez la console.");
+          showToast("Erreur lors du chargement des dossiers.");
         };
       } catch (err) {
         console.error("Erreur dans loadFolders:", err);
         showLoading(false);
-        alert("Erreur lors du chargement des dossiers. Vérifiez la console.");
+        showToast("Erreur lors du chargement des dossiers.");
       }
     }
 
@@ -372,7 +484,7 @@
           div.innerHTML = `<span class="material-icons">folder</span> ${folder}`;
           div.onclick = () => {
             currentFolder = folder;
-            console.log(`Clic sur le dossier: ${folder}`);
+            console.log(`Clic sur dossier: ${folder}`);
             showFolderFiles(folder, sortMethod);
             document.getElementById('backButton').style.display = 'inline-flex';
           };
@@ -384,7 +496,7 @@
         }
       } catch (err) {
         console.error("Erreur dans renderFolders:", err);
-        alert("Erreur lors de l'affichage des dossiers. Vérifiez la console.");
+        showToast("Erreur lors de l'affichage des dossiers.");
       }
     }
 
@@ -403,43 +515,60 @@
             currentFiles.sort((a, b) => (a.name || "").localeCompare(b.name || "", ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
           }
           renderFiles(currentFiles, folder);
-          loadFolders();
           showLoading(false);
         };
         request.onerror = () => {
           console.error(`Erreur lors du chargement des fichiers pour ${folder}`);
           showLoading(false);
-          alert("Erreur lors du chargement des fichiers. Vérifiez la console.");
+          showToast("Erreur lors du chargement des fichiers.");
         };
       } catch (err) {
         console.error("Erreur dans showFolderFiles:", err);
         showLoading(false);
-        alert("Erreur lors du chargement des fichiers. Vérifiez la console.");
+        showToast("Erreur lors du chargement des fichiers.");
       }
     }
 
-    function generateVideoThumbnail(video, callback) {
+    function generateVideoThumbnail(video, fileId, callback) {
       try {
-        video.onloadedmetadata = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = Math.min(video.videoWidth, 300); // Limiter la taille
-          canvas.height = Math.min(video.videoHeight, 300 * (video.videoHeight / video.videoWidth));
-          video.currentTime = 1;
-          video.onseeked = () => {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            console.log(`Miniature générée pour ${video.src}`);
-            callback(canvas);
-          };
-          video.onerror = () => {
-            console.error(`Erreur lors de la génération de la miniature pour ${video.src}`);
-            callback(null);
-          };
-        };
-        video.onerror = () => {
-          console.error(`Erreur de chargement de la vidéo pour miniature: ${video.src}`);
-          callback(null);
-        };
+        getThumbnail(fileId, (thumbnailData) => {
+          if (thumbnailData) {
+            const canvas = document.createElement('canvas');
+            const img = new Image();
+            img.src = thumbnailData;
+            img.onload = () => {
+              canvas.width = img.width;
+              canvas.height = img.height;
+              canvas.getContext('2d').drawImage(img, 0, 0);
+              console.log(`Miniature chargée depuis cache pour ID ${fileId}`);
+              callback(canvas);
+            };
+            img.onerror = () => callback(null);
+          } else {
+            video.onloadedmetadata = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              canvas.width = Math.min(video.videoWidth, 200);
+              canvas.height = Math.min(video.videoHeight, 200 * (video.videoHeight / video.videoWidth));
+              video.currentTime = 1;
+              video.onseeked = () => {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const thumbnailData = canvas.toDataURL('image/jpeg', 0.7);
+                saveThumbnail(fileId, thumbnailData);
+                console.log(`Miniature générée pour ID ${fileId}`);
+                callback(canvas);
+              };
+              video.onerror = () => {
+                console.error(`Erreur lors de la génération de la miniature pour ${video.src}`);
+                callback(null);
+              };
+            };
+            video.onerror = () => {
+              console.error(`Erreur de chargement de la vidéo pour miniature: ${video.src}`);
+              callback(null);
+            };
+          }
+        });
       } catch (err) {
         console.error("Erreur dans generateVideoThumbnail:", err);
         callback(null);
@@ -456,13 +585,14 @@
           preview.innerHTML = "<p>Aucun fichier dans ce dossier. Ajoutez des images ou vidéos !</p>";
         }
         files.forEach(file => {
-          console.log(`Rendu du fichier: ${file.name || "sans nom"}, type: ${file.type || "inconnu"}`);
+          console.log(`Rendu du fichier: ${file.name || "sans nom"}, type: ${file.type || "inconnu"}, ID: ${file.id}`);
           const wrapper = document.createElement('div');
           wrapper.style.display = 'inline-block';
           let element;
           if ((file.type || "").startsWith('image')) {
             element = document.createElement('img');
             element.src = file.data;
+            element.loading = "lazy";
             element.onerror = () => {
               console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
               element.replaceWith(document.createElement('p').appendChild(document.createTextNode(`Erreur: ${file.name || "Image inconnue"}`)).parentElement);
@@ -472,7 +602,7 @@
           } else {
             const video = document.createElement('video');
             video.src = file.data;
-            generateVideoThumbnail(video, (canvas) => {
+            generateVideoThumbnail(video, file.id, (canvas) => {
               if (canvas) {
                 element = canvas;
               } else {
@@ -482,7 +612,6 @@
               }
               element.onclick = () => showFullscreen(file, files.indexOf(file));
               wrapper.appendChild(element);
-              // Ajouter le bouton de suppression
               const delBtn = document.createElement('button');
               delBtn.innerHTML = '<span class="material-icons">delete</span> Supprimer';
               delBtn.className = 'file-actions-btn';
@@ -501,9 +630,18 @@
           }
         });
         container.appendChild(preview);
+        // Lazy loading avec IntersectionObserver
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && entry.target.tagName === 'IMG') {
+              entry.target.src = entry.target.dataset.src || entry.target.src;
+            }
+          });
+        }, { rootMargin: '100px' });
+        document.querySelectorAll('.preview img').forEach(img => observer.observe(img));
       } catch (err) {
         console.error("Erreur dans renderFiles:", err);
-        alert("Erreur lors de l'affichage des fichiers. Vérifiez la console.");
+        showToast("Erreur lors de l'affichage des fichiers.");
       }
     }
 
@@ -552,7 +690,7 @@
         }
       } catch (err) {
         console.error("Erreur dans updateFolderSelect:", err);
-        alert("Erreur lors de la mise à jour des dossiers. Vérifiez la console.");
+        showToast("Erreur lors de la mise à jour des dossiers.");
       }
     }
 
@@ -560,13 +698,13 @@
       try {
         const name = document.getElementById('folderName').value.trim();
         if (!name) {
-          alert("Nom du dossier invalide.");
+          showToast("Nom du dossier invalide.");
           return;
         }
         const select = document.getElementById('folderSelect');
         const exists = [...select.options].some(o => o.value.toLowerCase() === name.toLowerCase());
         if (exists) {
-          alert("Ce dossier existe déjà !");
+          showToast("Ce dossier existe déjà !");
           return;
         }
         const tx = db.transaction(STORE_NAME, "readwrite");
@@ -581,11 +719,11 @@
           select.value = name;
           loadFolders();
           document.getElementById('folderName').value = '';
-          alert("Dossier créé avec succès !");
+          showToast("Dossier créé avec succès !");
         };
       } catch (err) {
         console.error("Erreur dans createFolder:", err);
-        alert("Erreur lors de la création du dossier. Vérifiez la console.");
+        showToast("Erreur lors de la création du dossier.");
       }
     }
 
@@ -594,7 +732,7 @@
         const folderName = document.getElementById('folderSelect').value;
         const files = document.getElementById('fileInput').files;
         if (!folderName || files.length === 0) {
-          alert("Sélectionne un dossier et des fichiers");
+          showToast("Sélectionne un dossier et des fichiers");
           return;
         }
         showLoading(true);
@@ -617,7 +755,7 @@
             console.error(`Erreur de lecture du fichier: ${file.name}`);
             processed++;
             if (processed === files.length) showLoading(false);
-            alert(`Erreur lors de la lecture du fichier: ${file.name}`);
+            showToast(`Erreur lors de la lecture de ${file.name}`);
           };
           reader.readAsDataURL(file);
         }
@@ -625,27 +763,29 @@
       } catch (err) {
         console.error("Erreur dans addFiles:", err);
         showLoading(false);
-        alert("Erreur lors de l'ajout des fichiers. Vérifiez la console.");
+        showToast("Erreur lors de l'ajout des fichiers.");
       }
     }
 
     function deleteFile(id) {
       try {
         showLoading(true);
-        const tx = db.transaction(STORE_NAME, "readwrite");
+        const tx = db.transaction([STORE_NAME, THUMBNAIL_STORE], "readwrite");
         const store = tx.objectStore(STORE_NAME);
+        const thumbStore = tx.objectStore(THUMBNAIL_STORE);
         store.delete(id).onsuccess = () => {
+          thumbStore.delete(id);
           console.log(`Fichier supprimé: ID ${id}`);
           const sortMethod = document.getElementById('sortSelect').value;
           if (currentFolder) showFolderFiles(currentFolder, sortMethod);
           loadFolders();
           showLoading(false);
-          alert("Fichier supprimé avec succès !");
+          showToast("Fichier supprimé avec succès !");
         };
       } catch (err) {
         console.error("Erreur dans deleteFile:", err);
         showLoading(false);
-        alert("Erreur lors de la suppression du fichier. Vérifiez la console.");
+        showToast("Erreur lors de la suppression du fichier.");
       }
     }
 
@@ -667,12 +807,12 @@
           a.click();
           URL.revokeObjectURL(url);
           showLoading(false);
-          alert("Données exportées avec succès !");
+          showToast("Données exportées avec succès !");
         };
       } catch (err) {
         console.error("Erreur dans exportData:", err);
         showLoading(false);
-        alert("Erreur lors de l'exportation. Vérifiez la console.");
+        showToast("Erreur lors de l'exportation.");
       }
     }
 
@@ -680,7 +820,7 @@
       try {
         const file = event.target.files[0];
         if (!file || !file.name.endsWith('.json')) {
-          alert("Veuillez sélectionner un fichier JSON valide.");
+          showToast("Veuillez sélectionner un fichier JSON valide.");
           return;
         }
         showLoading(true);
@@ -700,7 +840,7 @@
                   if (processed === data.length) {
                     loadFolders();
                     showLoading(false);
-                    alert("Données importées avec succès !");
+                    showToast("Données importées avec succès !");
                   }
                 };
               } else {
@@ -709,14 +849,14 @@
                 if (processed === data.length) {
                   loadFolders();
                   showLoading(false);
-                  alert("Données importées, mais certaines entrées étaient invalides.");
+                  showToast("Données importées, mais certaines entrées étaient invalides.");
                 }
               }
             });
           } catch (err) {
             console.error("Erreur lors de l'importation:", err);
             showLoading(false);
-            alert("Erreur lors de l'importation : " + err.message);
+            showToast("Erreur lors de l'importation : " + err.message);
           }
         };
         reader.readAsText(file);
@@ -724,7 +864,7 @@
       } catch (err) {
         console.error("Erreur dans importData:", err);
         showLoading(false);
-        alert("Erreur lors de l'importation. Vérifiez la console.");
+        showToast("Erreur lors de l'importation.");
       }
     }
 
@@ -732,14 +872,21 @@
       try {
         currentFileIndex = index;
         const overlay = document.getElementById('fullscreenViewer');
-        overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia">&larr;</button><button id="nextMedia">&rarr;</button></div>';
+        overlay.innerHTML = `
+          <div class="nav-arrows">
+            <button id="prevMedia">&larr;</button>
+            <button id="nextMedia">&rarr;</button>
+          </div>
+          <button class="close-button" onclick="hideFullscreen()" aria-label="Fermer">
+            <span class="material-icons">close</span>
+          </button>`;
         let element;
         if ((file.type || "").startsWith('image')) {
           element = document.createElement('img');
           element.src = file.data;
           element.onerror = () => {
             console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
-            alert(`Erreur de chargement de l'image: ${file.name || "Image inconnue"}`);
+            showToast(`Erreur de chargement de l'image: ${file.name || "Image inconnue"}`);
           };
         } else {
           const player = document.createElement('div');
@@ -748,25 +895,25 @@
           video.src = file.data;
           video.setAttribute('playsinline', '');
           video.addEventListener('error', (e) => {
-            console.error(`Erreur de chargement de la vidéo en plein écran: ${file.name || "sans nom"}`, e);
-            alert(`Erreur de chargement de la vidéo: ${file.name || "Vidéo inconnue"}`);
+            console.error(`Erreur de chargement de la vidéo: ${file.name || "sans nom"}`, e);
+            showToast(`Erreur de chargement de la vidéo: ${file.name || "Vidéo inconnue"}`);
           });
           player.appendChild(video);
           const controls = document.createElement('div');
           controls.className = 'video-controls';
           controls.innerHTML = `
-            <button onclick="this.parentElement.parentElement.querySelector('video').paused ? this.parentElement.parentElement.querySelector('video').play() : this.parentElement.parentElement.querySelector('video').pause(); this.querySelector('span').textContent = this.parentElement.parentElement.querySelector('video').paused ? 'play_arrow' : 'pause';">
+            <button onclick="this.parentElement.parentElement.querySelector('video').paused ? this.parentElement.parentElement.querySelector('video').play() : this.parentElement.parentElement.querySelector('video').pause(); this.querySelector('span').textContent = this.parentElement.parentElement.querySelector('video').paused ? 'play_arrow' : 'pause';" aria-label="Lecture/Pause">
               <span class="material-icons">play_arrow</span>
             </button>
-            <input type="range" min="0" max="100" value="0" class="progress">
-            <input type="range" min="0" max="1" step="0.1" value="1" class="volume">
-            <select class="speed">
+            <input type="range" min="0" max="100" value="0" class="progress" aria-label="Progression de la vidéo">
+            <input type="range" min="0" max="1" step="0.1" value="1" class="volume" aria-label="Volume">
+            <select class="speed" aria-label="Vitesse de lecture">
               <option value="0.5">0.5x</option>
               <option value="1" selected>1x</option>
               <option value="1.5">1.5x</option>
               <option value="2">2x</option>
             </select>
-            <button onclick="if (document.fullscreenElement) document.exitFullscreen(); else this.parentElement.parentElement.querySelector('video').requestFullscreen();">
+            <button onclick="if (document.fullscreenElement) document.exitFullscreen(); else this.parentElement.parentElement.querySelector('video').requestFullscreen();" aria-label="Plein écran">
               <span class="material-icons">fullscreen</span>
             </button>
           `;
@@ -792,27 +939,27 @@
         document.getElementById('nextMedia').style.display = 'none';
       } catch (err) {
         console.error("Erreur dans showFullscreen:", err);
-        alert("Erreur lors de l'affichage en plein écran. Vérifiez la console.");
+        showToast("Erreur lors de l'affichage en plein écran.");
       }
     }
 
     function handleNavigation(event) {
       try {
-        if (event.target.id === 'fullscreenViewer' || event.target.tagName === 'IMG' || event.target.tagName === 'VIDEO') {
+        if ((event.target.id === 'fullscreenViewer' || event.target.tagName === 'IMG' || event.target.tagName === 'VIDEO') && !event.target.classList.contains('close-button')) {
           const rect = event.target.getBoundingClientRect();
           const clickX = event.clientX - rect.left;
           const width = rect.width;
           if (clickX < width / 2 && currentFileIndex > 0) {
-            console.log(`Navigation vers le fichier précédent: ${currentFiles[currentFileIndex - 1].name || "sans nom"}`);
+            console.log(`Navigation vers précédent: ${currentFiles[currentFileIndex - 1].name || "sans nom"}`);
             showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
           } else if (clickX >= width / 2 && currentFileIndex < currentFiles.length - 1) {
-            console.log(`Navigation vers le fichier suivant: ${currentFiles[currentFileIndex + 1].name || "sans nom"}`);
+            console.log(`Navigation vers suivant: ${currentFiles[currentFileIndex + 1].name || "sans nom"}`);
             showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
           }
         }
       } catch (err) {
         console.error("Erreur dans handleNavigation:", err);
-        alert("Erreur lors de la navigation. Vérifiez la console.");
+        showToast("Erreur lors de la navigation.");
       }
     }
 
@@ -824,7 +971,7 @@
         currentFileIndex = -1;
       } catch (err) {
         console.error("Erreur dans hideFullscreen:", err);
-        alert("Erreur lors de la fermeture du plein écran. Vérifiez la console.");
+        showToast("Erreur lors de la fermeture du plein écran.");
       }
     }
 
@@ -834,12 +981,15 @@
         loadFolders();
       } catch (err) {
         console.error("Erreur dans goBack:", err);
-        alert("Erreur lors du retour. Vérifiez la console.");
+        showToast("Erreur lors du retour.");
       }
     }
 
     document.getElementById('fullscreenViewer').addEventListener('click', handleNavigation);
     document.getElementById('importInput').addEventListener('change', importData);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideFullscreen();
+    });
 
     window.onload = openDB;
   </script>
