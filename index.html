@@ -4,107 +4,147 @@
   <meta charset="UTF-8" />
   <title>Gestionnaire de Fichiers Local (IndexedDB)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f4;
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f7fa;
       padding: 20px;
-    }
-    h1, h2 {
+      margin: 0;
       color: #333;
     }
+    h1, h2 {
+      color: #1a3c34;
+      margin: 0 0 10px;
+    }
     .section {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       margin-bottom: 20px;
+      transition: transform 0.2s ease;
+    }
+    .section:hover {
+      transform: translateY(-2px);
     }
     input, select, button {
-      padding: 8px;
-      margin: 5px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #d0d7de;
       font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #1a3c34;
+      box-shadow: 0 0 5px rgba(26, 60, 52, 0.3);
     }
     button {
-      background-color: #4CAF50;
+      background-color: #1a3c34;
       color: white;
       border: none;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.3s ease, transform 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
     button:hover {
-      background-color: #45a049;
+      background-color: #2e6b5e;
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
     }
     .folder-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
     }
     .folder-item {
-      background: #e0e0e0;
-      padding: 10px 15px;
-      border-radius: 5px;
+      background: #e8ecef;
+      padding: 15px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .folder-item:hover {
-      background-color: #d0d0d0;
+      background-color: #d0d7de;
+      transform: translateY(-2px);
+    }
+    .folder-item.active {
+      background-color: #1a3c34;
+      color: white;
     }
     .preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
     }
     .preview img, .preview video {
       width: 100%;
-      max-width: 240px;
-      max-height: 180px;
-      margin: 10px;
+      max-height: 150px;
+      object-fit: cover;
       border-radius: 8px;
       cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .preview video {
-      object-fit: cover;
-      display: block;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .preview img:hover, .preview video:hover {
       transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     .file-actions button {
-      margin-left: 10px;
-      background-color: #f44336;
-      border: none;
-      color: white;
-      padding: 5px 8px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background-color 0.3s ease;
+      background-color: #d32f2f;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
     }
     .file-actions button:hover {
-      background-color: #d32f2f;
+      background-color: #b71c1c;
     }
     #fullscreenViewer {
       position: fixed;
       top: 0; left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0,0,0,0.9);
+      background: rgba(0,0,0,0.95);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      cursor: zoom-out;
     }
     #fullscreenViewer img, #fullscreenViewer video {
       max-width: 90vw;
       max-height: 90vh;
       border-radius: 10px;
-      user-select: none;
       box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+    .nav-arrows {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      transform: translateY(-50%);
+    }
+    .nav-arrows button {
+      background: rgba(255,255,255,0.2);
+      font-size: 2rem;
+      padding: 10px;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    .nav-arrows button:hover {
+      background: rgba(255,255,255,0.3);
     }
     .loading {
       position: fixed;
@@ -120,40 +160,34 @@
     }
     @media (max-width: 600px) {
       .folder-list {
-        flex-direction: column;
+        grid-template-columns: 1fr;
       }
       .preview {
-        flex-direction: column;
-        gap: 8px;
+        grid-template-columns: 1fr;
       }
       .preview img, .preview video {
-        max-width: 100%;
-        max-height: none;
-        margin: 5px 0;
-      }
-      .preview div {
-        width: 100% !important;
-        display: block;
+        max-height: 200px;
       }
       input, select, button {
         width: 100%;
         padding: 12px;
         font-size: 1.1rem;
-        margin: 10px 0;
-        border-radius: 8px;
       }
       h1, h2 {
-        font-size: 1.3rem;
+        font-size: 1.4rem;
+      }
+      .folder-item {
+        padding: 12px;
       }
     }
   </style>
 </head>
 <body>
-  <h1>📁 Gestionnaire de Fichiers Local</h1>
+  <h1><span class="material-icons">folder</span> Gestionnaire de Fichiers Local</h1>
   <div class="section">
     <h2>Créer un dossier</h2>
-    <input type="text" id="folderName" placeholder="Nom du dossier" />
-    <button onclick="createFolder()">Créer</button>
+    <input type="text" id="folderName" placeholder="Entrez le nom du dossier" />
+    <button onclick="createFolder()"><span class="material-icons">create_new_folder</span> Créer</button>
   </div>
   <div class="section">
     <h2>Ajouter des fichiers</h2>
@@ -166,16 +200,23 @@
       <option value="alpha">Ordre alphabétique</option>
       <option value="recent">Récent</option>
     </select>
-    <button onclick="addFiles()">Ajouter</button>
-    <button onclick="exportData()">Exporter les données</button>
+    <button onclick="addFiles()"><span class="material-icons">upload_file</span> Ajouter</button>
+    <button onclick="exportData()"><span class="material-icons">download</span> Exporter</button>
+    <input type="file" id="importInput" accept=".json" style="display: none;" />
+    <button onclick="document.getElementById('importInput').click()"><span class="material-icons">upload</span> Importer</button>
   </div>
   <div class="section">
     <h2>Dossiers</h2>
-    <button id="backButton" style="display: none;" onclick="goBack()">Retour</button>
+    <button id="backButton" style="display: none;" onclick="goBack()"><span class="material-icons">arrow_back</span> Retour</button>
     <div id="foldersContainer" class="folder-list"></div>
     <div id="filesContainer" class="preview"></div>
   </div>
-  <div id="fullscreenViewer" onclick="hideFullscreen()"></div>
+  <div id="fullscreenViewer">
+    <div class="nav-arrows">
+      <button id="prevMedia" style="display: none;">&larr;</button>
+      <button id="nextMedia" style="display: none;">&rarr;</button>
+    </div>
+  </div>
   <div id="loading" class="loading">Chargement...</div>
   <script>
     const DB_NAME = "FileManagerDB";
@@ -183,6 +224,8 @@
     const STORE_NAME = "files";
     let db;
     let currentFolder = null;
+    let currentFiles = [];
+    let currentFileIndex = -1;
 
     function openDB() {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -258,7 +301,7 @@
       folders.forEach(folder => {
         const div = document.createElement("div");
         div.className = `folder-item ${folder === currentFolder ? 'active' : ''}`;
-        div.textContent = folder;
+        div.innerHTML = `<span class="material-icons">folder</span> ${folder}`;
         div.onclick = () => {
           currentFolder = folder;
           showFolderFiles(folder, sortMethod);
@@ -278,13 +321,13 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        let files = request.result.filter(file => file.folder === folder);
+        currentFiles = request.result.filter(file => file.folder === folder);
         if (sortMethod === 'recent') {
-          files.sort((a, b) => b.id - a.id);
+          currentFiles.sort((a, b) => b.id - a.id);
         } else {
-          files.sort((a, b) => a.name.localeCompare(b.name, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+          currentFiles.sort((a, b) => a.name.localeCompare(b.name, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
         }
-        renderFiles(files, folder);
+        renderFiles(currentFiles, folder);
         loadFolders();
         showLoading(false);
       };
@@ -292,7 +335,7 @@
 
     function renderFiles(files, folder) {
       const container = document.getElementById("filesContainer");
-      container.innerHTML = `<h3>Fichiers dans ${folder}</h3>`;
+      container.innerHTML = `<h3><span class="material-icons">folder_open</span> Fichiers dans ${folder}</h3>`;
       const preview = document.createElement("div");
       preview.className = "preview";
       if (files.length === 0) {
@@ -309,12 +352,12 @@
           element.controls = true;
         }
         if (element) {
-          element.onclick = () => showFullscreen(file);
+          element.onclick = () => showFullscreen(file, files.indexOf(file));
           const wrapper = document.createElement('div');
           wrapper.style.display = 'inline-block';
           wrapper.appendChild(element);
           const delBtn = document.createElement('button');
-          delBtn.textContent = 'Supprimer';
+          delBtn.innerHTML = '<span class="material-icons">delete</span> Supprimer';
           delBtn.className = 'file-actions-btn';
           delBtn.onclick = (e) => {
             e.stopPropagation();
@@ -411,7 +454,7 @@
           if (processed === files.length) showLoading(false);
         };
         reader.readAsDataURL(file);
-      };
+      }
       document.getElementById('fileInput').value = '';
     }
 
@@ -448,9 +491,50 @@
       };
     }
 
-    function showFullscreen(file) {
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file || !file.name.endsWith('.json')) return alert("Veuillez sélectionner un fichier JSON valide.");
+      showLoading(true);
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!Array.isArray(data)) throw new Error("Format JSON invalide");
+          const tx = db.transaction(STORE_NAME, "readwrite");
+          const store = tx.objectStore(STORE_NAME);
+          let processed = 0;
+          data.forEach(record => {
+            if (record.folder && record.name && record.type && record.data) {
+              store.put(record).onsuccess = () => {
+                processed++;
+                if (processed === data.length) {
+                  loadFolders();
+                  showLoading(false);
+                  alert("Données importées avec succès !");
+                }
+              };
+            } else {
+              processed++;
+              if (processed === data.length) {
+                loadFolders();
+                showLoading(false);
+                alert("Données importées, mais certaines entrées étaient invalides.");
+              }
+            }
+          });
+        } catch (err) {
+          showLoading(false);
+          alert("Erreur lors de l'importation : " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      document.getElementById('importInput').value = '';
+    }
+
+    function showFullscreen(file, index) {
+      currentFileIndex = index;
       const overlay = document.getElementById('fullscreenViewer');
-      overlay.innerHTML = '';
+      overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia">&larr;</button><button id="nextMedia">&rarr;</button></div>';
       let element;
       if (file.type.startsWith('image')) {
         element = document.createElement('img');
@@ -463,12 +547,23 @@
       }
       overlay.appendChild(element);
       overlay.style.display = 'flex';
+      document.getElementById('prevMedia').style.display = index > 0 ? 'block' : 'none';
+      document.getElementById('nextMedia').style.display = index < currentFiles.length - 1 ? 'block' : 'none';
+      document.getElementById('prevMedia').onclick = (e) => {
+        e.stopPropagation();
+        if (currentFileIndex > 0) showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
+      };
+      document.getElementById('nextMedia').onclick = (e) => {
+        e.stopPropagation();
+        if (currentFileIndex < currentFiles.length - 1) showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
+      };
     }
 
     function hideFullscreen() {
       const overlay = document.getElementById('fullscreenViewer');
       overlay.style.display = 'none';
-      overlay.innerHTML = '';
+      overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia" style="display: none;">&larr;</button><button id="nextMedia" style="display: none;">&rarr;</button></div>';
+      currentFileIndex = -1;
     }
 
     function goBack() {
@@ -479,6 +574,8 @@
     document.getElementById('fullscreenViewer').addEventListener('click', (e) => {
       if (e.target.id === 'fullscreenViewer') hideFullscreen();
     });
+
+    document.getElementById('importInput').addEventListener('change', importData);
 
     window.onload = openDB;
   </script>
