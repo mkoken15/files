@@ -88,7 +88,7 @@
       gap: 15px;
       margin-top: 10px;
     }
-    .preview img, .preview video {
+    .preview img, .preview canvas {
       width: 100%;
       max-height: 150px;
       object-fit: cover;
@@ -96,11 +96,10 @@
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .preview video {
-      display: block;
-      background: #000; /* Fond noir pour indiquer une vidéo */
+    .preview canvas {
+      background: #000;
     }
-    .preview img:hover, .preview video:hover {
+    .preview img:hover, .preview canvas:hover {
       transform: scale(1.05);
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
@@ -123,8 +122,9 @@
       align-items: center;
       justify-content: center;
       z-index: 9999;
+      cursor: pointer;
     }
-    #fullscreenViewer img, #fullscreenViewer video {
+    #fullscreenViewer img, #fullscreenViewer .video-player {
       max-width: 90vw;
       max-height: 90vh;
       border-radius: 10px;
@@ -145,6 +145,44 @@
       display: none;
       z-index: 10000;
     }
+    .video-player {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .video-player video {
+      width: 100%;
+      max-height: 80vh;
+      border-radius: 10px;
+    }
+    .video-controls {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      background: rgba(0,0,0,0.7);
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+    }
+    .video-controls button {
+      background: none;
+      color: white;
+      font-size: 1.2rem;
+      padding: 5px;
+    }
+    .video-controls input[type="range"] {
+      width: 100%;
+      max-width: 200px;
+    }
+    .video-controls select {
+      background: #1a3c34;
+      color: white;
+      border: none;
+    }
     @media (max-width: 600px) {
       .folder-list {
         grid-template-columns: 1fr;
@@ -152,7 +190,7 @@
       .preview {
         grid-template-columns: 1fr;
       }
-      .preview img, .preview video {
+      .preview img, .preview canvas {
         max-height: 200px;
       }
       input, select, button {
@@ -165,6 +203,12 @@
       }
       .folder-item {
         padding: 12px;
+      }
+      .video-controls {
+        flex-wrap: wrap;
+      }
+      .video-controls input[type="range"] {
+        max-width: 100%;
       }
     }
   </style>
@@ -198,12 +242,7 @@
     <div id="foldersContainer" class="folder-list"></div>
     <div id="filesContainer" class="preview"></div>
   </div>
-  <div id="fullscreenViewer">
-    <div class="nav-arrows">
-      <button id="prevMedia">&larr;</button>
-      <button id="nextMedia">&rarr;</button>
-    </div>
-  </div>
+  <div id="fullscreenViewer"></div>
   <div id="loading" class="loading">Chargement...</div>
   <script>
     const DB_NAME = "FileManagerDB";
@@ -320,6 +359,22 @@
       };
     }
 
+    function generateVideoThumbnail(video, callback) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        video.currentTime = 1; // Prendre une image à 1 seconde
+        video.onseeked = () => {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          callback(canvas);
+        };
+        video.onerror = () => callback(null);
+      };
+      video.onerror = () => callback(null);
+    }
+
     function renderFiles(files, folder) {
       const container = document.getElementById("filesContainer");
       container.innerHTML = `<h3><span class="material-icons">folder_open</span> Fichiers dans ${folder}</h3>`;
@@ -329,26 +384,31 @@
         preview.innerHTML = "<p>Aucun fichier dans ce dossier. Ajoutez des images ou vidéos !</p>";
       }
       files.forEach(file => {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'inline-block';
         let element;
         if (file.type.startsWith('image')) {
           element = document.createElement('img');
           element.src = file.data;
+          element.onclick = () => showFullscreen(file, files.indexOf(file));
+          wrapper.appendChild(element);
         } else if (file.type.startsWith('video')) {
-          element = document.createElement('video');
-          element.src = file.data;
-          element.controls = true;
-          element.poster = file.data; // Utiliser la première image comme poster
-          element.setAttribute('playsinline', ''); // Améliore la compatibilité mobile
-          element.addEventListener('error', (e) => {
-            console.error(`Erreur de chargement de la vidéo ${file.name}:`, e);
-            element.parentElement.innerHTML = `<p style="color: red;">Erreur de chargement de la vidéo: ${file.name}</p>`;
+          const video = document.createElement('video');
+          video.src = file.data;
+          generateVideoThumbnail(video, (canvas) => {
+            if (canvas) {
+              element = canvas;
+              element.onclick = () => showFullscreen(file, files.indexOf(file));
+              wrapper.appendChild(element);
+            } else {
+              element = document.createElement('p');
+              element.style.color = 'red';
+              element.textContent = `Erreur: ${file.name}`;
+              wrapper.appendChild(element);
+            }
           });
         }
         if (element) {
-          element.onclick = () => showFullscreen(file, files.indexOf(file));
-          const wrapper = document.createElement('div');
-          wrapper.style.display = 'inline-block';
-          wrapper.appendChild(element);
           const delBtn = document.createElement('button');
           delBtn.innerHTML = '<span class="material-icons">delete</span> Supprimer';
           delBtn.className = 'file-actions-btn';
@@ -550,13 +610,48 @@
         element = document.createElement('img');
         element.src = file.data;
       } else if (file.type.startsWith('video')) {
-        element = document.createElement('video');
-        element.src = file.data;
-        element.controls = true;
-        element.setAttribute('playsinline', '');
-        element.addEventListener('error', (e) => {
+        const player = document.createElement('div');
+        player.className = 'video-player';
+        const video = document.createElement('video');
+        video.src = file.data;
+        video.setAttribute('playsinline', '');
+        video.addEventListener('error', (e) => {
           console.error(`Erreur de chargement de la vidéo en plein écran ${file.name}:`, e);
           alert(`Erreur de chargement de la vidéo: ${file.name}`);
+        });
+        player.appendChild(video);
+        const controls = document.createElement('div');
+        controls.className = 'video-controls';
+        controls.innerHTML = `
+          <button onclick="this.parentElement.parentElement.querySelector('video').paused ? this.parentElement.parentElement.querySelector('video').play() : this.parentElement.parentElement.querySelector('video').pause(); this.querySelector('span').textContent = this.parentElement.parentElement.querySelector('video').paused ? 'play_arrow' : 'pause';">
+            <span class="material-icons">play_arrow</span>
+          </button>
+          <input type="range" min="0" max="100" value="0" class="progress">
+          <input type="range" min="0" max="1" step="0.1" value="1" class="volume">
+          <select class="speed">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+          <button onclick="if (document.fullscreenElement) document.exitFullscreen(); else this.parentElement.parentElement.querySelector('video').requestFullscreen();">
+            <span class="material-icons">fullscreen</span>
+          </button>
+        `;
+        player.appendChild(controls);
+        element = player;
+        video.addEventListener('timeupdate', () => {
+          const progress = controls.querySelector('.progress');
+          progress.value = (video.currentTime / video.duration) * 100;
+        });
+        controls.querySelector('.progress').addEventListener('input', (e) => {
+          video.currentTime = (e.target.value / 100) * video.duration;
+        });
+        controls.querySelector('.volume').addEventListener('input', (e) => {
+          video.volume = e.target.value;
+        });
+        controls.querySelector('.speed').addEventListener('change', (e) => {
+          video.playbackRate = parseFloat(e.target.value);
         });
       }
       overlay.appendChild(element);
@@ -572,15 +667,25 @@
       currentFileIndex = -1;
     }
 
+    function handleNavigation(event) {
+      if (event.target.id === 'fullscreenViewer' || event.target.tagName === 'IMG' || event.target.tagName === 'VIDEO') {
+        const rect = event.target.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const width = rect.width;
+        if (clickX < width / 2 && currentFileIndex > 0) {
+          showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
+        } else if (clickX >= width / 2 && currentFileIndex < currentFiles.length - 1) {
+          showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
+        }
+      }
+    }
+
     function goBack() {
       currentFolder = null;
       loadFolders();
     }
 
-    document.getElementById('fullscreenViewer').addEventListener('click', (e) => {
-      if (e.target.id === 'fullscreenViewer') hideFullscreen();
-    });
-
+    document.getElementById('fullscreenViewer').addEventListener('click', handleNavigation);
     document.getElementById('importInput').addEventListener('change', importData);
 
     window.onload = openDB;
