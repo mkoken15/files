@@ -98,6 +98,7 @@
     }
     .preview video {
       display: block;
+      background: #000; /* Fond noir pour indiquer une vidéo */
     }
     .preview img:hover, .preview video:hover {
       transform: scale(1.05);
@@ -130,7 +131,7 @@
       box-shadow: 0 0 20px rgba(255,255,255,0.3);
     }
     .nav-arrows {
-      display: none; /* Masquer les flèches par défaut */
+      display: none; /* Flèches invisibles */
     }
     .loading {
       position: fixed;
@@ -250,7 +251,7 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        const data = request.result.filter(file => file.folder && file.name && file.data);
+        const data = request.result.filter(file => file.folder && file.name && file.data && !file.name.startsWith('placeholder_'));
         const foldersMap = {};
         data.forEach(file => {
           if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
@@ -307,7 +308,7 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        currentFiles = request.result.filter(file => file.folder === folder);
+        currentFiles = request.result.filter(file => file.folder === folder && !file.name.startsWith('placeholder_'));
         if (sortMethod === 'recent') {
           currentFiles.sort((a, b) => b.id - a.id);
         } else {
@@ -336,8 +337,12 @@
           element = document.createElement('video');
           element.src = file.data;
           element.controls = true;
-          element.muted = true; // Pour éviter les erreurs d'autoplay
-          element.preload = 'metadata'; // Améliore le chargement
+          element.poster = file.data; // Utiliser la première image comme poster
+          element.setAttribute('playsinline', ''); // Améliore la compatibilité mobile
+          element.addEventListener('error', (e) => {
+            console.error(`Erreur de chargement de la vidéo ${file.name}:`, e);
+            element.parentElement.innerHTML = `<p style="color: red;">Erreur de chargement de la vidéo: ${file.name}</p>`;
+          });
         }
         if (element) {
           element.onclick = () => showFullscreen(file, files.indexOf(file));
@@ -421,7 +426,6 @@
       }
       const tx = db.transaction(STORE_NAME, "readwrite");
       const store = tx.objectStore(STORE_NAME);
-      // Ajouter un enregistrement vide pour créer le dossier
       const fileRecord = { folder: name, name: `placeholder_${Date.now()}`, type: "text/plain", data: "data:text/plain;base64," };
       store.add(fileRecord).onsuccess = () => {
         const opt = document.createElement('option');
@@ -433,7 +437,6 @@
         document.getElementById('folderName').value = '';
         alert("Dossier créé avec succès !");
       };
-      store.delete(fileRecord.id);
     }
 
     function addFiles() {
@@ -481,7 +484,7 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        const data = request.result;
+        const data = request.result.filter(file => !file.name.startsWith('placeholder_'));
         const json = JSON.stringify(data, null, 2);
         const blob = new Blob([json], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -511,7 +514,7 @@
           const store = tx.objectStore(STORE_NAME);
           let processed = 0;
           data.forEach(record => {
-            if (record.folder && record.name && record.type && record.data) {
+            if (record.folder && record.name && record.type && record.data && !record.name.startsWith('placeholder_')) {
               store.put(record).onsuccess = () => {
                 processed++;
                 if (processed === data.length) {
@@ -550,12 +553,14 @@
         element = document.createElement('video');
         element.src = file.data;
         element.controls = true;
-        element.autoplay = false; // Désactiver autoplay pour éviter les erreurs
-        element.muted = true; // Muted pour compatibilité
+        element.setAttribute('playsinline', '');
+        element.addEventListener('error', (e) => {
+          console.error(`Erreur de chargement de la vidéo en plein écran ${file.name}:`, e);
+          alert(`Erreur de chargement de la vidéo: ${file.name}`);
+        });
       }
       overlay.appendChild(element);
       overlay.style.display = 'flex';
-      // Masquer les flèches
       document.getElementById('prevMedia').style.display = 'none';
       document.getElementById('nextMedia').style.display = 'none';
     }
