@@ -260,6 +260,16 @@
       padding: 8px;
       border-radius: 6px;
     }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .pagination button {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
     @media (max-width: 600px) {
       .folder-list {
         grid-template-columns: 1fr;
@@ -328,6 +338,7 @@
     <button id="backButton" style="display: none;" onclick="goBack()"><span class="material-icons">arrow_back</span> Retour</button>
     <div id="foldersContainer" class="folder-list"></div>
     <div id="filesContainer" class="preview"></div>
+    <div id="pagination" class="pagination"></div>
   </div>
   <div id="fullscreenViewer"></div>
   <div id="loading" class="loading">Chargement...</div>
@@ -341,6 +352,8 @@
     let currentFolder = null;
     let currentFiles = [];
     let currentFileIndex = -1;
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 10;
 
     function showToast(message) {
       const toast = document.getElementById('toast');
@@ -408,8 +421,8 @@
         showLoading(true);
         const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
-        const fileRecord = { folder, name: file.name, type: file.type || "unknown", data: dataURL };
-        console.log(`Enregistrement: ${file.name} dans ${folder}`);
+        const fileRecord = { folder, name: file.name, type: file.type || "unknown", data: dataURL, size: file.size };
+        console.log(`Enregistrement: ${file.name} (${file.size} octets) dans ${folder}`);
         store.add(fileRecord).onsuccess = (event) => {
           console.log(`Fichier ${file.name} ajouté, ID: ${event.target.result}`);
           loadFolders();
@@ -484,6 +497,7 @@
           div.innerHTML = `<span class="material-icons">folder</span> ${folder}`;
           div.onclick = () => {
             currentFolder = folder;
+            currentPage = 1;
             console.log(`Clic sur dossier: ${folder}`);
             showFolderFiles(folder, sortMethod);
             document.getElementById('backButton').style.display = 'inline-flex';
@@ -493,6 +507,7 @@
         if (!currentFolder) {
           document.getElementById("filesContainer").innerHTML = "";
           document.getElementById('backButton').style.display = 'none';
+          document.getElementById('pagination').innerHTML = "";
         }
       } catch (err) {
         console.error("Erreur dans renderFolders:", err);
@@ -515,6 +530,7 @@
             currentFiles.sort((a, b) => (a.name || "").localeCompare(b.name || "", ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
           }
           renderFiles(currentFiles, folder);
+          renderPagination(currentFiles.length);
           showLoading(false);
         };
         request.onerror = () => {
@@ -529,8 +545,47 @@
       }
     }
 
-    function generateVideoThumbnail(video, fileId, callback) {
+    function renderPagination(totalItems) {
       try {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+        const pageCount = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        if (pageCount <= 1) return;
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = 'Précédent';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => {
+          if (currentPage > 1) {
+            currentPage--;
+            renderFiles(currentFiles, currentFolder);
+            renderPagination(totalItems);
+          }
+        };
+        pagination.appendChild(prevBtn);
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Suivant';
+        nextBtn.disabled = currentPage === pageCount;
+        nextBtn.onclick = () => {
+          if (currentPage < pageCount) {
+            currentPage++;
+            renderFiles(currentFiles, currentFolder);
+            renderPagination(totalItems);
+          }
+        };
+        pagination.appendChild(nextBtn);
+      } catch (err) {
+        console.error("Erreur dans renderPagination:", err);
+        showToast("Erreur lors de l'affichage de la pagination.");
+      }
+    }
+
+    function generateVideoThumbnail(video, fileId, fileSize, callback) {
+      try {
+        if (fileSize > 10 * 1024 * 1024) { // > 10 Mo
+          console.log(`Fichier trop volumineux (${fileSize} octets), utilisation d'un placeholder`);
+          callback(null);
+          return;
+        }
         getThumbnail(fileId, (thumbnailData) => {
           if (thumbnailData) {
             const canvas = document.createElement('canvas');
@@ -548,12 +603,12 @@
             video.onloadedmetadata = () => {
               const canvas = document.createElement('canvas');
               const ctx = canvas.getContext('2d');
-              canvas.width = Math.min(video.videoWidth, 200);
-              canvas.height = Math.min(video.videoHeight, 200 * (video.videoHeight / video.videoWidth));
+              canvas.width = Math.min(video.videoWidth, 150);
+              canvas.height = Math.min(video.videoHeight, 150 * (video.videoHeight / video.videoWidth));
               video.currentTime = 1;
               video.onseeked = () => {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const thumbnailData = canvas.toDataURL('image/jpeg', 0.7);
+                const thumbnailData = canvas.toDataURL('image/jpeg', 0.6);
                 saveThumbnail(fileId, thumbnailData);
                 console.log(`Miniature générée pour ID ${fileId}`);
                 callback(canvas);
@@ -583,9 +638,15 @@
         preview.className = "preview";
         if (files.length === 0) {
           preview.innerHTML = "<p>Aucun fichier dans ce dossier. Ajoutez des images ou vidéos !</p>";
+          container.appendChild(preview);
+          return;
         }
-        files.forEach(file => {
-          console.log(`Rendu du fichier: ${file.name || "sans nom"}, type: ${file.type || "inconnu"}, ID: ${file.id}`);
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        const end = start + ITEMS_PER_PAGE;
+        const paginatedFiles = files.slice(start, end);
+        console.log(`Rendu de ${paginatedFiles.length} fichiers (page ${currentPage})`);
+        paginatedFiles.forEach(file => {
+          console.log(`Rendu du fichier: ${file.name || "sans nom"}, type: ${file.type || "inconnu"}, ID: ${file.id}, taille: ${file.size || "inconnue"} octets`);
           const wrapper = document.createElement('div');
           wrapper.style.display = 'inline-block';
           let element;
@@ -602,7 +663,7 @@
           } else {
             const video = document.createElement('video');
             video.src = file.data;
-            generateVideoThumbnail(video, file.id, (canvas) => {
+            generateVideoThumbnail(video, file.id, file.size || 0, (canvas) => {
               if (canvas) {
                 element = canvas;
               } else {
@@ -630,7 +691,6 @@
           }
         });
         container.appendChild(preview);
-        // Lazy loading avec IntersectionObserver
         const observer = new IntersectionObserver((entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting && entry.target.tagName === 'IMG') {
@@ -884,6 +944,7 @@
         if ((file.type || "").startsWith('image')) {
           element = document.createElement('img');
           element.src = file.data;
+          element.loading = "lazy";
           element.onerror = () => {
             console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
             showToast(`Erreur de chargement de l'image: ${file.name || "Image inconnue"}`);
@@ -978,6 +1039,7 @@
     function goBack() {
       try {
         currentFolder = null;
+        currentPage = 1;
         loadFolders();
       } catch (err) {
         console.error("Erreur dans goBack:", err);
