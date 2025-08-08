@@ -88,7 +88,7 @@
       gap: 15px;
       margin-top: 10px;
     }
-    .preview img, .preview canvas {
+    .preview img, .preview canvas, .preview .video-placeholder {
       width: 100%;
       max-height: 150px;
       object-fit: cover;
@@ -96,10 +96,15 @@
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .preview canvas {
+    .preview .video-placeholder {
       background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1rem;
     }
-    .preview img:hover, .preview canvas:hover {
+    .preview img:hover, .preview canvas:hover, .preview .video-placeholder:hover {
       transform: scale(1.05);
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
@@ -190,7 +195,7 @@
       .preview {
         grid-template-columns: 1fr;
       }
-      .preview img, .preview canvas {
+      .preview img, .preview canvas, .preview .video-placeholder {
         max-height: 200px;
       }
       input, select, button {
@@ -290,7 +295,7 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        const data = request.result.filter(file => file.folder && file.name && file.data && !file.name.startsWith('placeholder_'));
+        const data = request.result.filter(file => file.folder && file.name && file.data);
         const foldersMap = {};
         data.forEach(file => {
           if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
@@ -347,7 +352,7 @@
       const store = tx.objectStore(STORE_NAME);
       const request = store.getAll();
       request.onsuccess = () => {
-        currentFiles = request.result.filter(file => file.folder === folder && !file.name.startsWith('placeholder_'));
+        currentFiles = request.result.filter(file => file.folder === folder);
         if (sortMethod === 'recent') {
           currentFiles.sort((a, b) => b.id - a.id);
         } else {
@@ -360,12 +365,12 @@
     }
 
     function generateVideoThumbnail(video, callback) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
       video.onloadedmetadata = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        video.currentTime = 1; // Prendre une image à 1 seconde
+        video.currentTime = 1;
         video.onseeked = () => {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           callback(canvas);
@@ -390,6 +395,9 @@
         if (file.type.startsWith('image')) {
           element = document.createElement('img');
           element.src = file.data;
+          element.onerror = () => {
+            element.replaceWith(document.createElement('p').appendChild(document.createTextNode(`Erreur: ${file.name}`)).parentElement);
+          };
           element.onclick = () => showFullscreen(file, files.indexOf(file));
           wrapper.appendChild(element);
         } else if (file.type.startsWith('video')) {
@@ -398,14 +406,13 @@
           generateVideoThumbnail(video, (canvas) => {
             if (canvas) {
               element = canvas;
-              element.onclick = () => showFullscreen(file, files.indexOf(file));
-              wrapper.appendChild(element);
             } else {
-              element = document.createElement('p');
-              element.style.color = 'red';
-              element.textContent = `Erreur: ${file.name}`;
-              wrapper.appendChild(element);
+              element = document.createElement('div');
+              element.className = 'video-placeholder';
+              element.innerHTML = `<span class="material-icons">movie</span> ${file.name}`;
             }
+            element.onclick = () => showFullscreen(file, files.indexOf(file));
+            wrapper.appendChild(element);
           });
         }
         if (element) {
@@ -574,7 +581,7 @@
           const store = tx.objectStore(STORE_NAME);
           let processed = 0;
           data.forEach(record => {
-            if (record.folder && record.name && record.type && record.data && !record.name.startsWith('placeholder_')) {
+            if (record.folder && record.name && record.type && record.data) {
               store.put(record).onsuccess = () => {
                 processed++;
                 if (processed === data.length) {
@@ -609,6 +616,7 @@
       if (file.type.startsWith('image')) {
         element = document.createElement('img');
         element.src = file.data;
+        element.onerror = () => alert(`Erreur de chargement de l'image: ${file.name}`);
       } else if (file.type.startsWith('video')) {
         const player = document.createElement('div');
         player.className = 'video-player';
@@ -639,7 +647,6 @@
           </button>
         `;
         player.appendChild(controls);
-        element = player;
         video.addEventListener('timeupdate', () => {
           const progress = controls.querySelector('.progress');
           progress.value = (video.currentTime / video.duration) * 100;
@@ -653,18 +660,12 @@
         controls.querySelector('.speed').addEventListener('change', (e) => {
           video.playbackRate = parseFloat(e.target.value);
         });
+        element = player;
       }
       overlay.appendChild(element);
       overlay.style.display = 'flex';
       document.getElementById('prevMedia').style.display = 'none';
       document.getElementById('nextMedia').style.display = 'none';
-    }
-
-    function hideFullscreen() {
-      const overlay = document.getElementById('fullscreenViewer');
-      overlay.style.display = 'none';
-      overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia" style="display: none;">&larr;</button><button id="nextMedia" style="display: none;">&rarr;</button></div>';
-      currentFileIndex = -1;
     }
 
     function handleNavigation(event) {
@@ -678,6 +679,13 @@
           showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
         }
       }
+    }
+
+    function hideFullscreen() {
+      const overlay = document.getElementById('fullscreenViewer');
+      overlay.style.display = 'none';
+      overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia" style="display: none;">&larr;</button><button id="nextMedia" style="display: none;">&rarr;</button></div>';
+      currentFileIndex = -1;
     }
 
     function goBack() {
