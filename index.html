@@ -363,7 +363,7 @@
   <div id="toast" class="toast"></div>
   <script>
     const DB_NAME = "FileManagerDB";
-    const DB_VERSION = 2; // Incremented for index addition
+    const DB_VERSION = 2; // Version 2 pour l'index et le champ created
     const STORE_NAME = "files";
     const THUMBNAIL_STORE = "thumbnails";
     let db;
@@ -395,17 +395,43 @@
         };
         request.onupgradeneeded = (event) => {
           db = event.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const oldVersion = event.oldVersion;
+          console.log(`Migration de la base de données de la version ${oldVersion} à ${DB_VERSION}`);
+          
+          if (oldVersion < 1) {
             const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
             store.createIndex("folder", "folder", { unique: false });
-          }
-          if (!db.objectStoreNames.contains(THUMBNAIL_STORE)) {
             db.createObjectStore(THUMBNAIL_STORE, { keyPath: "id" });
+            console.log("Nouvelle base de données créée avec magasin 'files' et 'thumbnails'");
+          }
+          
+          if (oldVersion === 1) {
+            const tx = event.target.transaction;
+            const store = tx.objectStore(STORE_NAME);
+            
+            if (!store.indexNames.contains("folder")) {
+              store.createIndex("folder", "folder", { unique: false });
+              console.log("Index 'folder' ajouté au magasin 'files'");
+            }
+            
+            store.openCursor().onsuccess = (e) => {
+              const cursor = e.target.result;
+              if (cursor) {
+                const record = cursor.value;
+                if (!record.created) {
+                  record.created = Date.now();
+                  cursor.update(record);
+                  console.log(`Champ 'created' ajouté pour le fichier ID ${record.id}`);
+                }
+                cursor.continue();
+              }
+            };
+            console.log("Migration de la version 1 à 2 terminée");
           }
         };
         request.onsuccess = (event) => {
           db = event.target.result;
-          console.log("Base de données ouverte");
+          console.log("Base de données ouverte avec succès");
           resolve();
         };
       });
@@ -465,9 +491,13 @@
           request.onerror = () => reject(new Error("Erreur lors du chargement des dossiers"));
         });
         const foldersMap = {};
-        data.filter(file => file.folder && file.data && !file.name.startsWith('placeholder_')).forEach(file => {
-          if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
-          foldersMap[file.folder].push(file);
+        data.forEach(file => {
+          if (file.folder) {
+            if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
+            if (!file.name.startsWith('placeholder_')) {
+              foldersMap[file.folder].push(file);
+            }
+          }
         });
         const sortMethod = document.getElementById('sortSelect').value;
         renderFolders(foldersMap, sortMethod);
@@ -510,7 +540,7 @@
         fragment.appendChild(div);
       });
       container.innerHTML = "";
-      fragment.appendChild(container);
+      container.appendChild(fragment);
       if (!currentFolder) {
         document.getElementById("filesContainer").innerHTML = "";
         document.getElementById('backButton').style.display = 'none';
@@ -637,7 +667,7 @@
         if ((file.type || "").startsWith('image')) {
           element = document.createElement('img');
           element.dataset.src = file.data;
-          element.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // Transparent placeholder
+          element.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
           element.loading = "lazy";
           element.onerror = () => {
             console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
@@ -698,8 +728,10 @@
         });
         const foldersMap = {};
         data.forEach(file => {
-          if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
-          foldersMap[file.folder].push(file);
+          if (file.folder) {
+            if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
+            foldersMap[file.folder].push(file);
+          }
         });
         folders = Object.keys(foldersMap).sort((a, b) => {
           const latestA = Math.max(...foldersMap[a].map(f => f.created || 0));
@@ -824,7 +856,7 @@
           new Promise((resolve, reject) => {
             const request = thumbStore.delete(id);
             request.onsuccess = () => resolve();
-            request.onerror = () => resolve(); // Thumbnail deletion is optional
+            request.onerror = () => resolve();
           })
         ]);
         console.log(`Fichier supprimé: ID ${id}`);
