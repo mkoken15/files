@@ -90,6 +90,12 @@
     button:active {
       transform: translateY(0);
     }
+    button.danger {
+      background: var(--error);
+    }
+    button.danger:hover {
+      background: #dc2626;
+    }
     .folder-list {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -365,6 +371,7 @@
     <button onclick="exportData()"><span class="material-icons-round">download</span> Exporter</button>
     <input type="file" id="importInput" accept=".json" style="display: none;" aria-label="Importer un fichier JSON" />
     <button onclick="document.getElementById('importInput').click()"><span class="material-icons-round">upload</span> Importer</button>
+    <button class="danger" onclick="resetDatabase()"><span class="material-icons-round">delete_forever</span> Réinitialiser la base</button>
   </div>
   <div class="section">
     <h2>Dossiers</h2>
@@ -378,7 +385,7 @@
   <div id="toast" class="toast"></div>
   <script>
     const DB_NAME = "FileManagerDB";
-    const DB_VERSION = 1;
+    const DB_VERSION = 2; // Incrémenté pour forcer une mise à jour
     const STORE_NAME = "files";
     const THUMBNAIL_STORE = "thumbnails";
     let db;
@@ -386,14 +393,14 @@
     let currentFiles = [];
     let currentFileIndex = -1;
     let currentPage = 1;
-    const ITEMS_PER_PAGE = /Mobi|Android/i.test(navigator.userAgent) ? 5 : 10;
+    const ITEMS_PER_PAGE = /Mobi|Android/i.test(navigator.userAgent) ? 3 : 10;
 
     function showToast(message, isSuccess = false) {
       const toast = document.getElementById('toast');
       toast.innerHTML = `<span class="material-icons-round">${isSuccess ? 'check_circle' : 'error'}</span> ${message}`;
       toast.className = `toast ${isSuccess ? 'success' : ''}`;
       toast.style.display = 'flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
     }
 
     function showLoading(show) {
@@ -403,9 +410,9 @@
     function openDB() {
       try {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = () => {
-          console.error("Erreur d'accès à IndexedDB");
-          showToast("Erreur d'accès à la base de données.");
+        request.onerror = (event) => {
+          console.error("Erreur d'accès à IndexedDB:", event.target.error);
+          showToast(`Erreur d'accès à la base de données: ${event.target.error?.message || 'Inconnue'}`);
         };
         request.onupgradeneeded = (event) => {
           db = event.target.result;
@@ -418,12 +425,42 @@
         };
         request.onsuccess = (event) => {
           db = event.target.result;
-          console.log("Base de données ouverte");
+          console.log("Base de données ouverte avec succès");
           loadFolders();
         };
+        request.onblocked = () => {
+          console.error("Accès à IndexedDB bloqué: une autre instance est ouverte");
+          showToast("Veuillez fermer les autres onglets utilisant l'application.");
+        };
       } catch (err) {
-        console.error("Erreur dans openDB:", err);
-        showToast("Erreur critique au démarrage.");
+        console.error("Erreur critique dans openDB:", err);
+        showToast("Erreur critique lors de l'ouverture de la base.");
+      }
+    }
+
+    function resetDatabase() {
+      if (!confirm("Voulez-vous vraiment réinitialiser la base de données ? Cela supprimera tous les fichiers et dossiers !")) return;
+      try {
+        showLoading(true);
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+        deleteRequest.onsuccess = () => {
+          console.log("Base de données supprimée");
+          showToast("Base de données réinitialisée avec succès !", true);
+          openDB();
+        };
+        deleteRequest.onerror = (event) => {
+          console.error("Erreur lors de la suppression de la base:", event.target.error);
+          showToast(`Erreur lors de la réinitialisation: ${event.target.error?.message || 'Inconnue'}`);
+        };
+        deleteRequest.onblocked = () => {
+          console.error("Suppression bloquée: une autre instance est ouverte");
+          showToast("Veuillez fermer les autres onglets avant de réinitialiser.");
+        };
+      } catch (err) {
+        console.error("Erreur dans resetDatabase:", err);
+        showToast("Erreur lors de la réinitialisation.");
+      } finally {
+        showLoading(false);
       }
     }
 
@@ -500,7 +537,7 @@
           }
         };
         request.onerror = () => {
-          console.error("Erreur lors du chargement des dossiers");
+          console.error("Erreur lors du chargement des dossiers:", event.target.error);
           showLoading(false);
           showToast("Erreur lors du chargement des dossiers.");
         };
@@ -568,7 +605,7 @@
           showLoading(false);
         };
         request.onerror = () => {
-          console.error(`Erreur lors du chargement des fichiers pour ${folder}`);
+          console.error(`Erreur lors du chargement des fichiers pour ${folder}:`, event.target.error);
           showLoading(false);
           showToast("Erreur lors du chargement des fichiers.");
         };
@@ -684,7 +721,7 @@
           const wrapper = document.createElement('div');
           wrapper.style.display = 'inline-block';
           let element;
-          if ((file.type || "").startsWith('image')) {
+          if ((file.type || "").startsWith('image') && file.data) {
             element = document.createElement('img');
             element.dataset.src = file.data;
             element.loading = "lazy";
@@ -694,9 +731,9 @@
             };
             element.onclick = () => showFullscreen(file, files.indexOf(file));
             wrapper.appendChild(element);
-          } else {
+          } else if ((file.type || "").startsWith('video')) {
             const video = document.createElement('video');
-            video.src = file.data;
+            video.src = file.data || "";
             generateVideoThumbnail(video, file.id, file.size || 0, (canvas) => {
               if (canvas) {
                 element = canvas;
@@ -722,6 +759,12 @@
               wrapper.appendChild(actionsDiv);
               preview.appendChild(wrapper);
             });
+          } else {
+            element = document.createElement('div');
+            element.className = 'video-placeholder';
+            element.innerHTML = `<span class="material-icons-round">warning</span> Fichier inconnu: ${file.name || "sans nom"}`;
+            wrapper.appendChild(element);
+            preview.appendChild(wrapper);
           }
         });
         container.appendChild(preview);
@@ -781,7 +824,7 @@
             select.appendChild(opt);
           });
           if (folders.includes(currentValue)) select.value = currentValue;
-          }
+        }
       } catch (err) {
         console.error("Erreur dans updateFolderSelect:", err);
         showToast("Erreur lors de la mise à jour des dossiers.");
@@ -975,7 +1018,7 @@
             <span class="material-icons-round">close</span>
           </button>`;
         let element;
-        if ((file.type || "").startsWith('image')) {
+        if ((file.type || "").startsWith('image') && file.data) {
           element = document.createElement('img');
           element.src = file.data;
           element.loading = "lazy";
@@ -987,7 +1030,7 @@
           const player = document.createElement('div');
           player.className = 'video-player';
           const video = document.createElement('video');
-          video.src = file.data;
+          video.src = file.data || "";
           video.setAttribute('playsinline', '');
           video.addEventListener('error', (e) => {
             console.error(`Erreur de chargement de la vidéo: ${file.name || "sans nom"}`, e);
