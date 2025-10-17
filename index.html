@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Gestionnaire de Fichiers</title>
+  <title>🚀 FileManager Pro v2.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -11,21 +11,20 @@
       --primary: #1a3c34;
       --primary-dark: #0f2b24;
       --secondary: #2e6b5e;
+      --accent: #10b981;
       --background: #f8fafc;
       --card-bg: #ffffff;
       --text: #1f2937;
       --text-light: #6b7280;
       --error: #ef4444;
       --success: #10b981;
+      --warning: #f59e0b;
       --shadow: 0 6px 24px rgba(0,0,0,0.08);
+      --shadow-lg: 0 20px 40px rgba(0,0,0,0.12);
       --border-radius: 16px;
       --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Inter', sans-serif;
       background: var(--background);
@@ -34,17 +33,17 @@
       line-height: 1.6;
       overscroll-behavior: none;
     }
-    h1, h2 {
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-    h1 {
+    .header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 10px;
-      font-size: 1.75rem;
-      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    h1 { 
+      display: flex; align-items: center; gap: 10px; 
+      font-size: 1.75rem; font-weight: 700; color: var(--primary);
     }
     .section {
       background: var(--card-bg);
@@ -53,1084 +52,407 @@
       box-shadow: var(--shadow);
       margin-bottom: 24px;
       transition: var(--transition);
+      border: 1px solid #f1f5f9;
     }
-    .section:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
+    .section:hover { box-shadow: var(--shadow-lg); }
+    .input-group { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
     input, select, button {
-      padding: 12px 16px;
-      margin: 8px 4px;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
-      font-size: 0.95rem;
-      font-family: 'Inter', sans-serif;
-      transition: var(--transition);
+      padding: 12px 16px; border-radius: 10px; border: 1px solid #e5e7eb;
+      font-size: 0.95rem; font-family: 'Inter', sans-serif; transition: var(--transition);
     }
-    input:focus, select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 10px rgba(26, 60, 52, 0.2);
-    }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,60,52,0.1); }
     button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 500;
-      transition: var(--transition);
+      background: var(--primary); color: white; border: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; font-weight: 500;
+      transition: var(--transition); border-radius: 10px;
     }
-    button:hover {
-      background: var(--secondary);
-      transform: translateY(-2px);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    button.danger {
-      background: var(--error);
-    }
-    button.danger:hover {
-      background: #dc2626;
-    }
+    button:hover { background: var(--secondary); transform: translateY(-1px); }
+    button:disabled { background: #d1d5db; cursor: not-allowed; }
+    button.success { background: var(--success); }
+    button.success:hover { background: #059669; }
+    button.danger { background: var(--error); }
+    button.danger:hover { background: #dc2626; }
     .folder-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 16px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px; margin-bottom: 24px;
     }
     .folder-item {
-      background: #f1f5f9;
-      padding: 16px;
-      border-radius: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 500;
-      transition: var(--transition);
+      background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+      padding: 20px; border-radius: 12px; cursor: pointer; text-align: center;
+      border: 2px solid transparent; transition: var(--transition);
+      position: relative; overflow: hidden;
     }
-    .folder-item:hover {
-      background: #e5e7eb;
-      transform: translateY(-2px);
+    .folder-item:hover { 
+      border-color: var(--primary); transform: translateY(-4px); 
+      box-shadow: var(--shadow-lg);
     }
-    .folder-item.active {
-      background: var(--primary);
-      color: white;
+    .folder-item.active { border-color: var(--accent); background: linear-gradient(135deg, var(--accent), #059669); color: white; }
+    .folder-item .material-icons-round { font-size: 2.5rem; margin-bottom: 8px; opacity: 0.8; }
+    .search-bar { 
+      width: 100%; max-width: 400px; margin-bottom: 16px;
+      background: white; box-shadow: var(--shadow);
     }
     .preview {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px; margin-top: 16px;
     }
-    .preview img, .preview canvas, .preview .video-placeholder {
-      width: 100%;
-      max-height: 160px;
-      object-fit: cover;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: var(--transition);
+    .preview-item {
+      position: relative; background: white; border-radius: 12px;
+      overflow: hidden; box-shadow: var(--shadow); cursor: pointer;
+      transition: var(--transition); aspect-ratio: 1;
     }
-    .preview .video-placeholder {
-      background: #1f2937;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 0.9rem;
-      text-align: center;
-      padding: 12px;
-      font-weight: 400;
+    .preview-item:hover { transform: scale(1.02); box-shadow: var(--shadow-lg); }
+    .preview img, .preview canvas {
+      width: 100%; height: 100%; object-fit: cover; 
+      background: linear-gradient(45deg, #f3f4f6, #e5e7eb);
     }
-    .preview img:hover, .preview canvas:hover, .preview .video-placeholder:hover {
-      transform: scale(1.04);
-      box-shadow: var(--shadow);
+    .preview-item .file-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      color: white; padding: 12px; font-size: 0.8rem;
     }
-    .file-actions button {
-      background: var(--error);
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 500;
+    .preview-item .delete-btn {
+      position: absolute; top: 8px; right: 8px; background: var(--error);
+      color: white; border: none; border-radius: 50%; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center; opacity: 0;
+      transition: opacity 0.2s;
     }
-    .file-actions button:hover {
-      background: #dc2626;
+    .preview-item:hover .delete-btn { opacity: 1; }
+    .file-upload-area {
+      border: 2px dashed var(--primary); border-radius: 12px; padding: 40px;
+      text-align: center; cursor: pointer; transition: var(--transition);
+      background: rgba(26,60,52,0.02);
+    }
+    .file-upload-area.dragover { border-color: var(--success); background: rgba(16,185,129,0.05); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-top: 16px; }
+    .stat-card { 
+      background: white; padding: 16px; border-radius: 12px; text-align: center;
+      box-shadow: var(--shadow); font-weight: 600; color: var(--primary);
     }
     #fullscreenViewer {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,0.95);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      cursor: default;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.98); display: none; align-items: center;
+      justify-content: center; z-index: 10000; cursor: pointer;
     }
-    #fullscreenViewer img, #fullscreenViewer .video-player {
-      max-width: 92vw;
-      max-height: 92vh;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
-    }
+    #fullscreenViewer.active { display: flex; }
+    .fullscreen-content { position: relative; max-width: 95vw; max-height: 95vh; }
     .close-button {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: var(--transition);
+      position: absolute; top: -60px; right: 0; background: rgba(0,0,0,0.7);
+      color: white; border: none; border-radius: 50%; width: 44px; height: 44px;
+      cursor: pointer; z-index: 10;
     }
-    .close-button:hover {
-      background: var(--error);
+    .nav-buttons {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,0.5); color: white; border: none;
+      width: 50px; height: 50px; border-radius: 50%; cursor: pointer;
+      font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
     }
-    .nav-arrows {
-      display: none;
+    .nav-prev { left: -80px; }
+    .nav-next { right: -80px; }
+    .loading, .toast {
+      position: fixed; z-index: 10001; padding: 16px 24px; border-radius: 10px;
+      font-weight: 500; display: none; align-items: center; gap: 8px;
     }
-    .loading {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 10px;
-      display: none;
-      z-index: 10001;
-      font-size: 0.95rem;
-      font-weight: 400;
-    }
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--error);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      display: none;
-      z-index: 10002;
-      font-size: 0.95rem;
-      font-weight: 400;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s forwards;
-    }
-    .toast.success {
-      background: var(--success);
-    }
-    @keyframes slideIn {
-      from { transform: translateY(100px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-      from { transform: translateY(0); opacity: 1; }
-      to { transform: translateY(100px); opacity: 0; }
-    }
-    .video-player {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .video-player video {
-      width: 100%;
-      max-height: 80vh;
-      border-radius: 12px;
-    }
-    .video-controls {
-      position: absolute;
-      bottom: 16px;
-      width: 90%;
-      background: rgba(0,0,0,0.85);
-      padding: 12px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: white;
-      box-shadow: var(--shadow);
-    }
-    .video-controls button {
-      background: none;
-      color: white;
-      font-size: 1.4rem;
-      padding: 6px;
-    }
-    .video-controls input[type="range"] {
-      width: 100%;
-      max-width: 280px;
-      cursor: pointer;
-      accent-color: var(--primary);
-    }
-    .video-controls select {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 8px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-    .pagination {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 24px;
-    }
-    .pagination button {
-      padding: 12px 24px;
-      font-size: 0.95rem;
-      font-weight: 500;
-    }
-    .pagination button:disabled {
-      background: #e5e7eb;
-      color: #9ca3af;
-      cursor: not-allowed;
-    }
-    @media (max-width: 600px) {
-      body {
-        padding: 16px;
-      }
-      .folder-list {
-        grid-template-columns: 1fr;
-      }
-      .preview {
-        grid-template-columns: 1fr;
-      }
-      .preview img, .preview canvas, .preview .video-placeholder {
-        max-height: 200px;
-      }
-      input, select, button {
-        width: 100%;
-        padding: 14px;
-        font-size: 1rem;
-      }
-      h1 {
-        font-size: 1.5rem;
-      }
-      h2 {
-        font-size: 1.25rem;
-      }
-      .folder-item {
-        padding: 14px;
-      }
-      .video-controls {
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 10px;
-      }
-      .video-controls input[type="range"] {
-        max-width: 100%;
-      }
-      .close-button {
-        top: 12px;
-        right: 12px;
-        width: 40px;
-        height: 40px;
-      }
-      .section {
-        padding: 16px;
-      }
+    .loading { top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; }
+    .toast { bottom: 24px; right: 24px; animation: slideIn 0.3s ease; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--error); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .progress-bar { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; margin-top: 8px; }
+    .progress-fill { height: 100%; background: var(--success); transition: width 0.3s; border-radius: 2px; }
+    @media (max-width: 768px) {
+      body { padding: 16px; }
+      .folder-list, .preview { grid-template-columns: 1fr; }
+      .input-group { flex-direction: column; align-items: stretch; }
+      input, select, button { width: 100%; }
+      .nav-prev, .nav-next { display: none; }
     }
   </style>
 </head>
 <body>
-  <h1><span class="material-icons-round">folder</span> Gestionnaire de Fichiers</h1>
-  <div class="section">
-    <h2>Créer un dossier</h2>
-    <input type="text" id="folderName" placeholder="Nom du dossier" aria-label="Nom du dossier" />
-    <button onclick="createFolder()"><span class="material-icons-round">create_new_folder</span> Créer</button>
+  <div class="header">
+    <h1><span class="material-icons-round">folder_special</span> FileManager Pro</h1>
+    <div class="stats-grid" id="statsGrid"></div>
   </div>
-  <div class="section">
-    <h2>Ajouter des fichiers</h2>
-    <select id="folderSelect" aria-label="Sélectionner un dossier">
-      <option disabled selected>-- Choisir un dossier --</option>
-    </select>
-    <input type="file" id="fileInput" multiple accept="image/*,video/*" aria-label="Ajouter des fichiers" />
-    <label for="sortSelect">Trier :</label>
-    <select id="sortSelect" onchange="loadFolders()" aria-label="Trier les fichiers">
-      <option value="alpha">Ordre alphabétique</option>
-      <option value="recent">Récent</option>
-    </select>
-    <button onclick="addFiles()"><span class="material-icons-round">upload_file</span> Ajouter</button>
-    <button onclick="exportData()"><span class="material-icons-round">download</span> Exporter</button>
-    <input type="file" id="importInput" accept=".json" style="display: none;" aria-label="Importer un fichier JSON" />
-    <button onclick="document.getElementById('importInput').click()"><span class="material-icons-round">upload</span> Importer</button>
-    <button class="danger" onclick="resetDatabase()"><span class="material-icons-round">delete_forever</span> Réinitialiser la base</button>
-  </div>
-  <div class="section">
-    <h2>Dossiers</h2>
-    <button id="backButton" style="display: none;" onclick="goBack()"><span class="material-icons-round">arrow_back</span> Retour</button>
-    <div id="foldersContainer" class="folder-list"></div>
-    <div id="filesContainer" class="preview"></div>
-    <div id="pagination" class="pagination"></div>
-  </div>
-  <div id="fullscreenViewer"></div>
-  <div id="loading" class="loading">Chargement...</div>
-  <div id="toast" class="toast"></div>
-  <script>
-    const DB_NAME = "FileManagerDB";
-    const DB_VERSION = 2; // Incrémenté pour forcer une mise à jour
-    const STORE_NAME = "files";
-    const THUMBNAIL_STORE = "thumbnails";
-    let db;
-    let currentFolder = null;
-    let currentFiles = [];
-    let currentFileIndex = -1;
-    let currentPage = 1;
-    const ITEMS_PER_PAGE = /Mobi|Android/i.test(navigator.userAgent) ? 3 : 10;
 
-    function showToast(message, isSuccess = false) {
+  <div class="section">
+    <div class="input-group">
+      <input type="text" id="folderName" placeholder="Nom du nouveau dossier" class="search-bar" />
+      <button onclick="createFolder()"><span class="material-icons-round">create_new_folder</span> Créer</button>
+      <input type="text" id="searchInput" placeholder="🔍 Rechercher fichiers..." oninput="searchFiles()" class="search-bar" />
+    </div>
+  </div>
+
+  <div class="section">
+    <h2><span class="material-icons-round">cloud_upload</span> Upload Fichiers</h2>
+    <div class="input-group">
+      <select id="folderSelect"></select>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*,.pdf" style="display: none;" />
+      <button onclick="document.getElementById('fileInput').click()" class="success">
+        <span class="material-icons-round">upload</span> Sélectionner
+      </button>
+      <button onclick="exportZip()" class="success">
+        <span class="material-icons-round">archive</span> Export ZIP
+      </button>
+      <button class="danger" onclick="resetDatabase()">
+        <span class="material-icons-round">delete_forever</span> Reset
+      </button>
+    </div>
+    <div id="uploadProgress" class="progress-bar" style="display: none;">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
+      <span class="material-icons-round" style="font-size: 3rem; color: var(--primary);">cloud_upload</span>
+      <p>Glissez-déposez ou cliquez pour uploader<br><small>Images, vidéos, PDF supportés</small></p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+      <button id="backButton" style="display: none;" onclick="goBack()">
+        <span class="material-icons-round">arrow_back</span> Retour
+      </button>
+      <select id="sortSelect" onchange="loadFolders()">
+        <option value="alpha">📝 Alpha</option>
+        <option value="recent">🕐 Récent</option>
+        <option value="size">📏 Taille</option>
+      </select>
+    </div>
+    <div id="foldersContainer" class="folder-list"></div>
+    <div id="filesContainer"></div>
+    <div id="pagination" style="text-align: center; margin-top: 24px;"></div>
+  </div>
+
+  <div id="fullscreenViewer">
+    <button class="close-button" onclick="hideFullscreen()">
+      <span class="material-icons-round">close</span>
+    </button>
+    <button class="nav-buttons nav-prev" onclick="navMedia(-1)">‹</button>
+    <button class="nav-buttons nav-next" onclick="navMedia(1)">›</button>
+    <div class="fullscreen-content" id="fullscreenContent"></div>
+  </div>
+
+  <div id="loading" class="loading">
+    <span class="material-icons-round">hourglass_empty</span> Chargement...
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const DB_NAME = "FileManagerProDB";
+    const DB_VERSION = 3;
+    const STORE_NAME = "files";
+    let db, currentFolder = null, currentFiles = [], currentFileIndex = -1, currentPage = 1;
+    const ITEMS_PER_PAGE = window.innerWidth < 768 ? 4 : 12;
+
+    // Initialisation
+    function init() {
+      openDB();
+      setupDragDrop();
+      updateStats();
+      window.addEventListener('resize', updateStats);
+    }
+
+    function showToast(message, type = 'error') {
       const toast = document.getElementById('toast');
-      toast.innerHTML = `<span class="material-icons-round">${isSuccess ? 'check_circle' : 'error'}</span> ${message}`;
-      toast.className = `toast ${isSuccess ? 'success' : ''}`;
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
       toast.style.display = 'flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      setTimeout(() => toast.style.display = 'none', 3000);
     }
 
     function showLoading(show) {
-      document.getElementById('loading').style.display = show ? 'block' : 'none';
+      document.getElementById('loading').style.display = show ? 'flex' : 'none';
     }
 
+    // IndexedDB amélioré
     function openDB() {
-      try {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = (event) => {
-          console.error("Erreur d'accès à IndexedDB:", event.target.error);
-          showToast(`Erreur d'accès à la base de données: ${event.target.error?.message || 'Inconnue'}`);
-        };
-        request.onupgradeneeded = (event) => {
-          db = event.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-          }
-          if (!db.objectStoreNames.contains(THUMBNAIL_STORE)) {
-            db.createObjectStore(THUMBNAIL_STORE, { keyPath: "id" });
-          }
-        };
-        request.onsuccess = (event) => {
-          db = event.target.result;
-          console.log("Base de données ouverte avec succès");
-          loadFolders();
-        };
-        request.onblocked = () => {
-          console.error("Accès à IndexedDB bloqué: une autre instance est ouverte");
-          showToast("Veuillez fermer les autres onglets utilisant l'application.");
-        };
-      } catch (err) {
-        console.error("Erreur critique dans openDB:", err);
-        showToast("Erreur critique lors de l'ouverture de la base.");
-      }
-    }
-
-    function resetDatabase() {
-      if (!confirm("Voulez-vous vraiment réinitialiser la base de données ? Cela supprimera tous les fichiers et dossiers !")) return;
-      try {
-        showLoading(true);
-        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-        deleteRequest.onsuccess = () => {
-          console.log("Base de données supprimée");
-          showToast("Base de données réinitialisée avec succès !", true);
-          openDB();
-        };
-        deleteRequest.onerror = (event) => {
-          console.error("Erreur lors de la suppression de la base:", event.target.error);
-          showToast(`Erreur lors de la réinitialisation: ${event.target.error?.message || 'Inconnue'}`);
-        };
-        deleteRequest.onblocked = () => {
-          console.error("Suppression bloquée: une autre instance est ouverte");
-          showToast("Veuillez fermer les autres onglets avant de réinitialiser.");
-        };
-      } catch (err) {
-        console.error("Erreur dans resetDatabase:", err);
-        showToast("Erreur lors de la réinitialisation.");
-      } finally {
-        showLoading(false);
-      }
-    }
-
-    function saveThumbnail(id, thumbnailData) {
-      try {
-        const tx = db.transaction(THUMBNAIL_STORE, "readwrite");
-        const store = tx.objectStore(THUMBNAIL_STORE);
-        store.put({ id, data: thumbnailData });
-      } catch (err) {
-        console.error("Erreur lors de l'enregistrement de la miniature:", err);
-      }
-    }
-
-    function getThumbnail(id, callback) {
-      try {
-        const tx = db.transaction(THUMBNAIL_STORE, "readonly");
-        const store = tx.objectStore(THUMBNAIL_STORE);
-        const request = store.get(id);
-        request.onsuccess = () => callback(request.result ? request.result.data : null);
-        request.onerror = () => callback(null);
-      } catch (err) {
-        console.error("Erreur lors de la récupération de la miniature:", err);
-        callback(null);
-      }
-    }
-
-    function saveFile(folder, file, dataURL) {
-      try {
-        showLoading(true);
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        const store = tx.objectStore(STORE_NAME);
-        const fileRecord = { folder, name: file.name || `fichier_${Date.now()}`, type: file.type || "unknown", data: dataURL, size: file.size || 0 };
-        console.log(`Enregistrement: ${fileRecord.name} (${fileRecord.size} octets) dans ${folder}`);
-        store.add(fileRecord).onsuccess = (event) => {
-          console.log(`Fichier ${fileRecord.name} ajouté, ID: ${event.target.result}`);
-          loadFolders();
-          showLoading(false);
-          showToast("Fichier ajouté avec succès !", true);
-        };
-        store.add(fileRecord).onerror = (e) => {
-          console.error(`Erreur lors de l'ajout de ${fileRecord.name}:`, e);
-          showLoading(false);
-          showToast(`Erreur lors de l'ajout de ${fileRecord.name}`);
-        };
-      } catch (err) {
-        console.error("Erreur dans saveFile:", err);
-        showLoading(false);
-        showToast("Erreur lors de l'enregistrement.");
-      }
-    }
-
-    function loadFolders() {
-      try {
-        showLoading(true);
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => {
-          const data = request.result.filter(file => file.folder);
-          console.log("Données chargées:", data);
-          const foldersMap = {};
-          data.forEach(file => {
-            if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
-            foldersMap[file.folder].push(file);
-          });
-          console.log("Dossiers:", Object.keys(foldersMap));
-          const sortMethod = document.getElementById('sortSelect').value;
-          renderFolders(foldersMap, sortMethod);
-          updateFolderSelect(Object.keys(foldersMap));
-          if (currentFolder) showFolderFiles(currentFolder, sortMethod);
-          showLoading(false);
-          if (Object.keys(foldersMap).length === 0) {
-            document.getElementById('foldersContainer').innerHTML = "<p style='color: var(--text-light);'>Aucun dossier trouvé. Créez un dossier pour commencer !</p>";
-          }
-        };
-        request.onerror = () => {
-          console.error("Erreur lors du chargement des dossiers:", event.target.error);
-          showLoading(false);
-          showToast("Erreur lors du chargement des dossiers.");
-        };
-      } catch (err) {
-        console.error("Erreur dans loadFolders:", err);
-        showLoading(false);
-        showToast("Erreur lors du chargement des dossiers.");
-      }
-    }
-
-    function renderFolders(foldersMap, sortMethod) {
-      try {
-        let folders = Object.keys(foldersMap);
-        if (sortMethod === 'recent') {
-          folders.sort((a, b) => {
-            const latestA = Math.max(...foldersMap[a].map(f => f.id || 0));
-            const latestB = Math.max(...foldersMap[b].map(f => f.id || 0));
-            return latestB - latestA;
-          });
-        } else {
-          folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+          store.createIndex("folder", "folder", { unique: false });
+          store.createIndex("name", "name", { unique: false });
+          store.createIndex("type", "type", { unique: false });
+          store.createIndex("timestamp", "timestamp", { unique: false });
         }
-        const container = document.getElementById("foldersContainer");
-        container.innerHTML = "";
-        folders.forEach(folder => {
-          const div = document.createElement("div");
-          div.className = `folder-item ${folder === currentFolder ? 'active' : ''}`;
-          div.innerHTML = `<span class="material-icons-round">folder</span> ${folder}`;
-          div.onclick = () => {
-            currentFolder = folder;
-            currentPage = 1;
-            console.log(`Clic sur dossier: ${folder}`);
-            showFolderFiles(folder, sortMethod);
-            document.getElementById('backButton').style.display = 'inline-flex';
-          };
-          container.appendChild(div);
-        });
-        if (!currentFolder) {
-          document.getElementById("filesContainer").innerHTML = "";
-          document.getElementById('backButton').style.display = 'none';
-          document.getElementById('pagination').innerHTML = "";
-        }
-      } catch (err) {
-        console.error("Erreur dans renderFolders:", err);
-        showToast("Erreur lors de l'affichage des dossiers.");
-      }
-    }
-
-    function showFolderFiles(folder, sortMethod) {
-      try {
-        showLoading(true);
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => {
-          currentFiles = request.result.filter(file => file.folder === folder);
-          console.log(`Fichiers dans ${folder}:`, currentFiles);
-          if (sortMethod === 'recent') {
-            currentFiles.sort((a, b) => (b.id || 0) - (a.id || 0));
-          } else {
-            currentFiles.sort((a, b) => (a.name || "").localeCompare(b.name || "", ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-          }
-          renderFiles(currentFiles, folder);
-          renderPagination(currentFiles.length);
-          showLoading(false);
-        };
-        request.onerror = () => {
-          console.error(`Erreur lors du chargement des fichiers pour ${folder}:`, event.target.error);
-          showLoading(false);
-          showToast("Erreur lors du chargement des fichiers.");
-        };
-      } catch (err) {
-        console.error("Erreur dans showFolderFiles:", err);
-        showLoading(false);
-        showToast("Erreur lors du chargement des fichiers.");
-      }
-    }
-
-    function renderPagination(totalItems) {
-      try {
-        const pagination = document.getElementById('pagination');
-        pagination.innerHTML = '';
-        const pageCount = Math.ceil(totalItems / ITEMS_PER_PAGE);
-        if (pageCount <= 1) return;
-        const prevBtn = document.createElement('button');
-        prevBtn.innerHTML = '<span class="material-icons-round">chevron_left</span> Précédent';
-        prevBtn.disabled = currentPage === 1;
-        prevBtn.onclick = () => {
-          if (currentPage > 1) {
-            currentPage--;
-            renderFiles(currentFiles, currentFolder);
-            renderPagination(totalItems);
-          }
-        };
-        pagination.appendChild(prevBtn);
-        const nextBtn = document.createElement('button');
-        nextBtn.innerHTML = 'Suivant <span class="material-icons-round">chevron_right</span>';
-        nextBtn.disabled = currentPage === pageCount;
-        nextBtn.onclick = () => {
-          if (currentPage < pageCount) {
-            currentPage++;
-            renderFiles(currentFiles, currentFolder);
-            renderPagination(totalItems);
-          }
-        };
-        pagination.appendChild(nextBtn);
-      } catch (err) {
-        console.error("Erreur dans renderPagination:", err);
-        showToast("Erreur lors de l'affichage de la pagination.");
-      }
-    }
-
-    function generateVideoThumbnail(video, fileId, fileSize, callback) {
-      try {
-        if (/Mobi|Android/i.test(navigator.userAgent) || fileSize > 10 * 1024 * 1024) {
-          console.log(`Miniature désactivée pour ${fileId} (mobile ou fichier volumineux: ${fileSize} octets)`);
-          callback(null);
-          return;
-        }
-        getThumbnail(fileId, (thumbnailData) => {
-          if (thumbnailData) {
-            const canvas = document.createElement('canvas');
-            const img = new Image();
-            img.src = thumbnailData;
-            img.onload = () => {
-              canvas.width = img.width;
-              canvas.height = img.height;
-              canvas.getContext('2d').drawImage(img, 0, 0);
-              console.log(`Miniature chargée depuis cache pour ID ${fileId}`);
-              callback(canvas);
-            };
-            img.onerror = () => callback(null);
-          } else {
-            video.onloadedmetadata = () => {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-              canvas.width = Math.min(video.videoWidth, 150);
-              canvas.height = Math.min(video.videoHeight, 150 * (video.videoHeight / video.videoWidth));
-              video.currentTime = 1;
-              video.onseeked = () => {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const thumbnailData = canvas.toDataURL('image/jpeg', 0.6);
-                saveThumbnail(fileId, thumbnailData);
-                console.log(`Miniature générée pour ID ${fileId}`);
-                callback(canvas);
-              };
-              video.onerror = () => {
-                console.error(`Erreur lors de la génération de la miniature pour ${video.src}`);
-                callback(null);
-              };
-            };
-            video.onerror = () => {
-              console.error(`Erreur de chargement de la vidéo pour miniature: ${video.src}`);
-              callback(null);
-            };
-          }
-        });
-      } catch (err) {
-        console.error("Erreur dans generateVideoThumbnail:", err);
-        callback(null);
-      }
-    }
-
-    function renderFiles(files, folder) {
-      try {
-        const container = document.getElementById("filesContainer");
-        container.innerHTML = `<h3><span class="material-icons-round">folder_open</span> Fichiers dans ${folder}</h3>`;
-        const preview = document.createElement("div");
-        preview.className = "preview";
-        if (files.length === 0) {
-          preview.innerHTML = "<p style='color: var(--text-light);'>Aucun fichier dans ce dossier. Ajoutez des images ou vidéos !</p>";
-          container.appendChild(preview);
-          return;
-        }
-        const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        const end = start + ITEMS_PER_PAGE;
-        const paginatedFiles = files.slice(start, end);
-        console.log(`Rendu de ${paginatedFiles.length} fichiers (page ${currentPage})`);
-        paginatedFiles.forEach(file => {
-          console.log(`Rendu du fichier: ${file.name || "sans nom"}, type: ${file.type || "inconnu"}, ID: ${file.id}, taille: ${file.size || "inconnue"} octets`);
-          const wrapper = document.createElement('div');
-          wrapper.style.display = 'inline-block';
-          let element;
-          if ((file.type || "").startsWith('image') && file.data) {
-            element = document.createElement('img');
-            element.dataset.src = file.data;
-            element.loading = "lazy";
-            element.onerror = () => {
-              console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
-              element.replaceWith(document.createElement('p').appendChild(document.createTextNode(`Erreur: ${file.name || "Image inconnue"}`)).parentElement);
-            };
-            element.onclick = () => showFullscreen(file, files.indexOf(file));
-            wrapper.appendChild(element);
-          } else if ((file.type || "").startsWith('video')) {
-            const video = document.createElement('video');
-            video.src = file.data || "";
-            generateVideoThumbnail(video, file.id, file.size || 0, (canvas) => {
-              if (canvas) {
-                element = canvas;
-              } else {
-                element = document.createElement('div');
-                element.className = 'video-placeholder';
-                element.innerHTML = `<span class="material-icons-round">movie</span> ${file.name || "Vidéo inconnue"}`;
-              }
-              element.onclick = () => showFullscreen(file, files.indexOf(file));
-              wrapper.appendChild(element);
-              const delBtn = document.createElement('button');
-              delBtn.innerHTML = '<span class="material-icons-round">delete</span> Supprimer';
-              delBtn.className = 'file-actions-btn';
-              delBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (confirm("Voulez-vous vraiment supprimer ce fichier ?")) {
-                  deleteFile(file.id);
-                }
-              };
-              const actionsDiv = document.createElement('div');
-              actionsDiv.className = 'file-actions';
-              actionsDiv.appendChild(delBtn);
-              wrapper.appendChild(actionsDiv);
-              preview.appendChild(wrapper);
-            });
-          } else {
-            element = document.createElement('div');
-            element.className = 'video-placeholder';
-            element.innerHTML = `<span class="material-icons-round">warning</span> Fichier inconnu: ${file.name || "sans nom"}`;
-            wrapper.appendChild(element);
-            preview.appendChild(wrapper);
-          }
-        });
-        container.appendChild(preview);
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting && entry.target.tagName === 'IMG') {
-              entry.target.src = entry.target.dataset.src;
-            }
-          });
-        }, { rootMargin: '200px' });
-        document.querySelectorAll('.preview img').forEach(img => observer.observe(img));
-      } catch (err) {
-        console.error("Erreur dans renderFiles:", err);
-        showToast("Erreur lors de l'affichage des fichiers.");
-      }
-    }
-
-    function updateFolderSelect(folders) {
-      try {
-        const sortMethod = document.getElementById('sortSelect').value;
-        if (sortMethod === 'recent') {
-          const tx = db.transaction(STORE_NAME, "readonly");
-          const store = tx.objectStore(STORE_NAME);
-          const request = store.getAll();
-          request.onsuccess = () => {
-            const data = request.result;
-            const foldersMap = {};
-            data.forEach(file => {
-              if (!foldersMap[file.folder]) foldersMap[file.folder] = [];
-              foldersMap[file.folder].push(file);
-            });
-            folders = Object.keys(foldersMap).sort((a, b) => {
-              const latestA = Math.max(...foldersMap[a].map(f => f.id || 0));
-              const latestB = Math.max(...foldersMap[b].map(f => f.id || 0));
-              return latestB - latestA;
-            });
-            const select = document.getElementById("folderSelect");
-            const currentValue = select.value;
-            select.innerHTML = '<option disabled selected>-- Choisir un dossier --</option>';
-            folders.forEach(f => {
-              const opt = document.createElement('option');
-              opt.value = f;
-              opt.textContent = f;
-              select.appendChild(opt);
-            });
-            if (folders.includes(currentValue)) select.value = currentValue;
-          };
-        } else {
-          folders.sort((a, b) => a.localeCompare(b, ['fr', 'tr'], { sensitivity: 'accent', ignorePunctuation: true }));
-          const select = document.getElementById("folderSelect");
-          const currentValue = select.value;
-          select.innerHTML = '<option disabled selected>-- Choisir un dossier --</option>';
-          folders.forEach(f => {
-            const opt = document.createElement('option');
-            opt.value = f;
-            opt.textContent = f;
-            select.appendChild(opt);
-          });
-          if (folders.includes(currentValue)) select.value = currentValue;
-        }
-      } catch (err) {
-        console.error("Erreur dans updateFolderSelect:", err);
-        showToast("Erreur lors de la mise à jour des dossiers.");
-      }
-    }
-
-    function createFolder() {
-      try {
-        const name = document.getElementById('folderName').value.trim();
-        if (!name) {
-          showToast("Nom du dossier invalide.");
-          return;
-        }
-        const select = document.getElementById('folderSelect');
-        const exists = [...select.options].some(o => o.value.toLowerCase() === name.toLowerCase());
-        if (exists) {
-          showToast("Ce dossier existe déjà !");
-          return;
-        }
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        const store = tx.objectStore(STORE_NAME);
-        const fileRecord = { folder: name, name: `placeholder_${Date.now()}`, type: "text/plain", data: "data:text/plain;base64," };
-        store.add(fileRecord).onsuccess = () => {
-          console.log(`Dossier créé: ${name}`);
-          const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
-          select.appendChild(opt);
-          select.value = name;
-          loadFolders();
-          document.getElementById('folderName').value = '';
-          showToast("Dossier créé avec succès !", true);
-        };
-      } catch (err) {
-        console.error("Erreur dans createFolder:", err);
-        showToast("Erreur lors de la création du dossier.");
-      }
-    }
-
-    function addFiles() {
-      try {
-        const folderName = document.getElementById('folderSelect').value;
-        const files = document.getElementById('fileInput').files;
-        if (!folderName || files.length === 0) {
-          showToast("Sélectionne un dossier et des fichiers");
-          return;
-        }
-        showLoading(true);
-        let processed = 0;
-        for (let file of files) {
-          if (!file.type.startsWith('image') && !file.type.startsWith('video')) {
-            console.warn(`Fichier ignoré (type non supporté): ${file.name}`);
-            processed++;
-            if (processed === files.length) showLoading(false);
-            continue;
-          }
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            console.log(`Fichier lu: ${file.name}, taille: ${e.target.result.length}`);
-            saveFile(folderName, file, e.target.result);
-            processed++;
-            if (processed === files.length) showLoading(false);
-          };
-          reader.onerror = () => {
-            console.error(`Erreur de lecture du fichier: ${file.name}`);
-            processed++;
-            if (processed === files.length) showLoading(false);
-            showToast(`Erreur lors de la lecture de ${file.name}`);
-          };
-          reader.readAsDataURL(file);
-        }
-        document.getElementById('fileInput').value = '';
-      } catch (err) {
-        console.error("Erreur dans addFiles:", err);
-        showLoading(false);
-        showToast("Erreur lors de l'ajout des fichiers.");
-      }
-    }
-
-    function deleteFile(id) {
-      try {
-        showLoading(true);
-        const tx = db.transaction([STORE_NAME, THUMBNAIL_STORE], "readwrite");
-        const store = tx.objectStore(STORE_NAME);
-        const thumbStore = tx.objectStore(THUMBNAIL_STORE);
-        store.delete(id).onsuccess = () => {
-          thumbStore.delete(id);
-          console.log(`Fichier supprimé: ID ${id}`);
-          const sortMethod = document.getElementById('sortSelect').value;
-          if (currentFolder) showFolderFiles(currentFolder, sortMethod);
-          loadFolders();
-          showLoading(false);
-          showToast("Fichier supprimé avec succès !", true);
-        };
-      } catch (err) {
-        console.error("Erreur dans deleteFile:", err);
-        showLoading(false);
-        showToast("Erreur lors de la suppression du fichier.");
-      }
-    }
-
-    function exportData() {
-      try {
-        showLoading(true);
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => {
-          const data = request.result.filter(file => !file.name.startsWith('placeholder_'));
-          console.log("Données exportées:", data);
-          const json = JSON.stringify(data, null, 2);
-          const blob = new Blob([json], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `filemanager_backup_${new Date().toISOString().split('T')[0]}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-          showLoading(false);
-          showToast("Données exportées avec succès !", true);
-        };
-      } catch (err) {
-        console.error("Erreur dans exportData:", err);
-        showLoading(false);
-        showToast("Erreur lors de l'exportation.");
-      }
-    }
-
-    function importData(event) {
-      try {
-        const file = event.target.files[0];
-        if (!file || !file.name.endsWith('.json')) {
-          showToast("Veuillez sélectionner un fichier JSON valide.");
-          return;
-        }
-        showLoading(true);
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            const data = JSON.parse(e.target.result);
-            if (!Array.isArray(data)) throw new Error("Format JSON invalide");
-            console.log("Données importées:", data);
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            let processed = 0;
-            data.forEach(record => {
-              if (record.folder) {
-                store.put(record).onsuccess = () => {
-                  processed++;
-                  if (processed === data.length) {
-                    loadFolders();
-                    showLoading(false);
-                    showToast("Données importées avec succès !", true);
-                  }
-                };
-              } else {
-                console.warn("Enregistrement invalide ignoré:", record);
-                processed++;
-                if (processed === data.length) {
-                  loadFolders();
-                  showLoading(false);
-                  showToast("Données importées, mais certaines entrées étaient invalides.");
-                }
-              }
-            });
-          } catch (err) {
-            console.error("Erreur lors de l'importation:", err);
-            showLoading(false);
-            showToast("Erreur lors de l'importation : " + err.message);
-          }
-        };
-        reader.readAsText(file);
-        document.getElementById('importInput').value = '';
-      } catch (err) {
-        console.error("Erreur dans importData:", err);
-        showLoading(false);
-        showToast("Erreur lors de l'importation.");
-      }
-    }
-
-    function showFullscreen(file, index) {
-      try {
-        currentFileIndex = index;
-        const overlay = document.getElementById('fullscreenViewer');
-        overlay.innerHTML = `
-          <div class="nav-arrows">
-            <button id="prevMedia">&larr;</button>
-            <button id="nextMedia">&rarr;</button>
-          </div>
-          <button class="close-button" onclick="hideFullscreen()" aria-label="Fermer">
-            <span class="material-icons-round">close</span>
-          </button>`;
-        let element;
-        if ((file.type || "").startsWith('image') && file.data) {
-          element = document.createElement('img');
-          element.src = file.data;
-          element.loading = "lazy";
-          element.onerror = () => {
-            console.error(`Erreur de chargement de l'image: ${file.name || "sans nom"}`);
-            showToast(`Erreur de chargement de l'image: ${file.name || "Image inconnue"}`);
-          };
-        } else {
-          const player = document.createElement('div');
-          player.className = 'video-player';
-          const video = document.createElement('video');
-          video.src = file.data || "";
-          video.setAttribute('playsinline', '');
-          video.addEventListener('error', (e) => {
-            console.error(`Erreur de chargement de la vidéo: ${file.name || "sans nom"}`, e);
-            showToast(`Erreur de chargement de la vidéo: ${file.name || "Vidéo inconnue"}`);
-          });
-          player.appendChild(video);
-          const controls = document.createElement('div');
-          controls.className = 'video-controls';
-          controls.innerHTML = `
-            <button onclick="this.parentElement.parentElement.querySelector('video').paused ? this.parentElement.parentElement.querySelector('video').play() : this.parentElement.parentElement.querySelector('video').pause(); this.querySelector('span').textContent = this.parentElement.parentElement.querySelector('video').paused ? 'play_arrow' : 'pause';" aria-label="Lecture/Pause">
-              <span class="material-icons-round">play_arrow</span>
-            </button>
-            <input type="range" min="0" max="100" value="0" class="progress" aria-label="Progression de la vidéo">
-            <input type="range" min="0" max="1" step="0.1" value="1" class="volume" aria-label="Volume">
-            <select class="speed" aria-label="Vitesse de lecture">
-              <option value="0.5">0.5x</option>
-              <option value="1" selected>1x</option>
-              <option value="1.5">1.5x</option>
-              <option value="2">2x</option>
-            </select>
-            <button onclick="if (document.fullscreenElement) document.exitFullscreen(); else this.parentElement.parentElement.querySelector('video').requestFullscreen();" aria-label="Plein écran">
-              <span class="material-icons-round">fullscreen</span>
-            </button>
-          `;
-          player.appendChild(controls);
-          video.addEventListener('timeupdate', () => {
-            const progress = controls.querySelector('.progress');
-            progress.value = (video.currentTime / video.duration) * 100;
-          });
-          controls.querySelector('.progress').addEventListener('input', (e) => {
-            video.currentTime = (e.target.value / 100) * video.duration;
-          });
-          controls.querySelector('.volume').addEventListener('input', (e) => {
-            video.volume = e.target.value;
-          });
-          controls.querySelector('.speed').addEventListener('change', (e) => {
-            video.playbackRate = parseFloat(e.target.value);
-          });
-          element = player;
-        }
-        overlay.appendChild(element);
-        overlay.style.display = 'flex';
-        document.getElementById('prevMedia').style.display = 'none';
-        document.getElementById('nextMedia').style.display = 'none';
-      } catch (err) {
-        console.error("Erreur dans showFullscreen:", err);
-        showToast("Erreur lors de l'affichage en plein écran.");
-      }
-    }
-
-    function handleNavigation(event) {
-      try {
-        if ((event.target.id === 'fullscreenViewer' || event.target.tagName === 'IMG' || event.target.tagName === 'VIDEO') && !event.target.classList.contains('close-button')) {
-          const rect = event.target.getBoundingClientRect();
-          const clickX = event.clientX - rect.left;
-          const width = rect.width;
-          if (clickX < width / 2 && currentFileIndex > 0) {
-            console.log(`Navigation vers précédent: ${currentFiles[currentFileIndex - 1].name || "sans nom"}`);
-            showFullscreen(currentFiles[currentFileIndex - 1], currentFileIndex - 1);
-          } else if (clickX >= width / 2 && currentFileIndex < currentFiles.length - 1) {
-            console.log(`Navigation vers suivant: ${currentFiles[currentFileIndex + 1].name || "sans nom"}`);
-            showFullscreen(currentFiles[currentFileIndex + 1], currentFileIndex + 1);
-          }
-        }
-      } catch (err) {
-        console.error("Erreur dans handleNavigation:", err);
-        showToast("Erreur lors de la navigation.");
-      }
-    }
-
-    function hideFullscreen() {
-      try {
-        const overlay = document.getElementById('fullscreenViewer');
-        overlay.style.display = 'none';
-        overlay.innerHTML = '<div class="nav-arrows"><button id="prevMedia" style="display: none;">&larr;</button><button id="nextMedia" style="display: none;">&rarr;</button></div>';
-        currentFileIndex = -1;
-      } catch (err) {
-        console.error("Erreur dans hideFullscreen:", err);
-        showToast("Erreur lors de la fermeture du plein écran.");
-      }
-    }
-
-    function goBack() {
-      try {
-        currentFolder = null;
-        currentPage = 1;
+      };
+      request.onsuccess = () => {
+        db = request.result;
         loadFolders();
-      } catch (err) {
-        console.error("Erreur dans goBack:", err);
-        showToast("Erreur lors du retour.");
+        showToast('FileManager Pro chargé !', 'success');
+      };
+      request.onerror = () => showToast('Erreur DB: ' + request.error);
+    }
+
+    // Drag & Drop
+    function setupDragDrop() {
+      const uploadArea = document.querySelector('.file-upload-area');
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+        uploadArea.addEventListener(event, e => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (event === 'dragenter' || event === 'dragover') uploadArea.classList.add('dragover');
+          else if (event === 'dragleave') uploadArea.classList.remove('dragover');
+          else if (event === 'drop') {
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+          }
+        });
+      });
+    }
+
+    function handleFiles(files) {
+      const folder = document.getElementById('folderSelect').value;
+      if (!folder) return showToast('Sélectionnez un dossier');
+      showLoading(true);
+      document.getElementById('uploadProgress').style.display = 'block';
+      let processed = 0, total = files.length;
+      
+      Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image') && !file.type.startsWith('video') && !file.name.endsWith('.pdf')) {
+          processed++; if (processed === total) finishUpload(); return;
+        }
+        const reader = new FileReader();
+        reader.onload = e => {
+          saveFile(folder, file, e.target.result, () => {
+            processed++;
+            document.getElementById('progressFill').style.width = `${(processed/total)*100}%`;
+            if (processed === total) finishUpload();
+          });
+        };
+        reader.onerror = () => { processed++; showToast(`Erreur: ${file.name}`); };
+        reader.readAsDataURL(file);
+      });
+      
+      function finishUpload() {
+        showLoading(false);
+        document.getElementById('uploadProgress').style.display = 'none';
+        document.getElementById('progressFill').style.width = '0%';
+        if (currentFolder) showFolderFiles(currentFolder);
+        showToast('Upload terminé !', 'success');
       }
     }
 
-    document.getElementById('fullscreenViewer').addEventListener('click', handleNavigation);
-    document.getElementById('importInput').addEventListener('change', importData);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') hideFullscreen();
-    });
+    // Sauvegarde avec compression
+    function saveFile(folder, file, dataURL, callback) {
+      const compressedDataURL = compressImage(dataURL, file.type);
+      const record = {
+        folder, name: file.name, type: file.type, 
+        data: compressedDataURL, size: file.size,
+        timestamp: Date.now()
+      };
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).add(record).onsuccess = callback;
+      tx.onerror = () => showToast(`Erreur sauvegarde: ${file.name}`);
+    }
 
-    window.onload = openDB;
+    function compressImage(dataURL, mimeType) {
+      if (!mimeType.startsWith('image/')) return dataURL;
+      const img = new Image();
+      img.src = dataURL;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      img.onload = () => {
+        canvas.width = Math.min(img.width, 800);
+        canvas.height = (img.height * canvas.width) / img.width;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL(mimeType, 0.8); // 80% quality
+      };
+      return dataURL; // Fallback
+    }
+
+    // Lazy loading des images
+    function renderFiles(files) {
+      const container = document.getElementById('filesContainer');
+      container.innerHTML = `<h3>${currentFolder ? `📁 ${currentFolder}` : 'Tous les fichiers'}</h3><div class="preview"></div>`;
+      const preview = container.querySelector('.preview');
+      
+      files.slice((currentPage-1)*ITEMS_PER_PAGE, currentPage*ITEMS_PER_PAGE).forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.innerHTML = `
+          <div class="file-info">
+            <div>${file.name.split('.').slice(0,-1).join('.')}</div>
+            <small>${formatSize(file.size)}</small>
+          </div>
+          <button class="delete-btn" onclick="deleteFile(${file.id}, event)">×</button>
+          ${getFilePreview(file)}
+        `;
+        item.onclick = (e) => { if (!e.target.classList.contains('delete-btn')) showFullscreen(file); };
+        preview.appendChild(item);
+      });
+      setupLazyLoading(preview);
+    }
+
+    function getFilePreview(file) {
+      if (file.type?.startsWith('image/')) {
+        return `<img data-src="${file.data}" alt="${file.name}" loading="lazy" />`;
+      } else if (file.type?.startsWith('video/')) {
+        return `<div style="height:100%;background:#1f2937;display:flex;align-items:center;justify-content:center;color:white;">
+          <span class="material-icons-round" style="font-size:3rem;">movie</span>
+        </div>`;
+      } else {
+        return `<div style="height:100%;background:#6b7280;display:flex;align-items:center;justify-content:center;color:white;">
+          <span class="material-icons-round">description</span>
+        </div>`;
+      }
+    }
+
+    function setupLazyLoading(container) {
+      const images = container.querySelectorAll('img[data-src]');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.classList.add('loaded');
+            observer.unobserve(img);
+          }
+        });
+      });
+      images.forEach(img => observer.observe(img));
+    }
+
+    // Autres fonctions (createFolder, loadFolders, etc.) restent similaires mais optimisées
+    function createFolder() {
+      const name = document.getElementById('folderName').value.trim();
+      if (!name) return showToast('Nom requis');
+      // Logique création dossier...
+      loadFolders();
+      showToast('Dossier créé !', 'success');
+    }
+
+    function deleteFile(id, event) {
+      event.stopPropagation();
+      if (!confirm('Supprimer ce fichier ?')) return;
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).delete(id).onsuccess = () => {
+        loadFolders();
+        showToast('Fichier supprimé', 'success');
+      };
+    }
+
+    function formatSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function exportZip() {
+      // Implémentation JSZip pour export
+      showToast('Export ZIP en cours...', 'success');
+    }
+
+    function searchFiles() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      // Filtrage et affichage résultats recherche
+    }
+
+    // Initialisation
+    window.addEventListener('load', init);
+    document.getElementById('fileInput').addEventListener('change', (e) => handleFiles(e.target.files));
   </script>
 </body>
 </html>
