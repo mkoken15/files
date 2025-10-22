@@ -1,622 +1,241 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📁 FileHub - Gestionnaire de Fichiers</title>
-  <meta name="description" content="Stockez, organisez et partagez vos fichiers localement.">
-  <meta name="theme-color" content="#1e88e5">
-  <link rel="manifest" href="data:application/manifest+json,{
-    'name': 'FileHub',
-    'short_name': 'FileHub',
-    'start_url': '/',
-    'display': 'standalone',
-    'background_color': '#f5f5f5',
-    'theme_color': '#1e88e5',
-    'icons': [{'src': 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzFlODhlNSIgZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTBoOC41YzEuMzkgMCAyLjUtMS4xMiAyLjUtMi41VjguNWMwLTEuMzgtMS4xMi0yLjUtMi41LTIuNUgxMk0xMiAyM2MtNS41MiAwLTEwLTQuNDgtMTAtMTBzNC40OC0xMCAxMC0xMGg2LjVhMy41IDMuNSAwIDAxMy41IDMuNXY3LjVhMy41IDMuNSAwIDAxLTMuNSAzLjVIMTJaIi8+PC9zdmc+', 'sizes': '192x192', 'type': 'image/png'}]
-  }">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary: #1e88e5;
-      --primary-dark: #1565c0;
-      --secondary: #ff9800;
-      --background: #f5f5f5;
-      --surface: #ffffff;
-      --text: #212121;
-      --text-secondary: #757575;
-      --error: #d32f2f;
-      --success: #388e3c;
-      --shadow: 0 2px 4px rgba(0,0,0,0.1);
-      --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
-      --border-radius: 8px;
-      --transition: all 0.3s ease;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --background: #121212;
-        --surface: #1e1e1e;
-        --text: #e0e0e0;
-        --text-secondary: #b0b0b0;
-      }
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Roboto', sans-serif;
-      background: var(--background);
-      color: var(--text);
-      line-height: 1.6;
-      overscroll-behavior: none;
-      min-height: 100vh;
-    }
-    .app-bar {
-      background: var(--primary);
-      color: white;
-      padding: 16px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--shadow);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .app-title { display: flex; align-items: center; gap: 12px; font-size: 1.5rem; font-weight: 500; }
-    .app-actions { display: flex; gap: 8px; }
-    .btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: var(--transition);
-    }
-    .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
-    .btn-danger { background: var(--error); }
-    .btn-success { background: var(--success); }
-    .fab {
-      background: var(--secondary);
-      border-radius: 50%;
-      width: 56px;
-      height: 56px;
-      box-shadow: var(--shadow-lg);
-    }
-    .fab:hover { background: #f57c00; }
-    .container { max-width: 1400px; margin: 0 auto; padding: 16px; }
-    .upload-area {
-      border: 2px dashed var(--text-secondary);
-      border-radius: var(--border-radius);
-      padding: 32px;
-      text-align: center;
-      cursor: pointer;
-      margin: 16px 0;
-      transition: var(--transition);
-    }
-    .upload-area.dragover { border-color: var(--primary); background: #e3f2fd; }
-    .upload-icon { font-size: 3rem; color: var(--primary); margin-bottom: 8px; }
-    .input-group {
-      display: flex;
-      gap: 12px;
-      margin: 16px 0;
-      flex-wrap: wrap;
-    }
-    input, select {
-      padding: 12px;
-      border: 1px solid var(--text-secondary);
-      border-radius: var(--border-radius);
-      font-size: 1rem;
-      flex: 1;
-      min-width: 200px;
-    }
-    input:focus, select:focus { outline: none; border-color: var(--primary); }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
-      margin: 16px 0;
-    }
-    .card {
-      background: var(--surface);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      padding: 16px;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-    .folder-card { text-align: center; }
-    .folder-icon { font-size: 2.5rem; color: var(--secondary); margin-bottom: 8px; }
-    .file-preview {
-      width: 100%;
-      height: 120px;
-      background: #eee;
-      border-radius: var(--border-radius);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-    .file-preview img, .file-preview video { width: 100%; height: 100%; object-fit: cover; }
-    .file-preview.loading::after { content: '⏳'; font-size: 1.5rem; color: var(--text-secondary); }
-    .file-info { font-size: 0.9rem; text-align: center; }
-    .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-size { color: var(--text-secondary); font-size: 0.8rem; }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.95);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal.active { display: flex; }
-    .modal-content { max-width: 95%; max-height: 95%; }
-    .modal-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      color: white;
-      font-size: 2rem;
-      cursor: pointer;
-    }
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--success);
-      color: white;
-      padding: 12px 24px;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      display: none;
-      z-index: 1001;
-    }
-    .toast.error { background: var(--error); }
-    .toast.show { display: block; }
-    .stats {
-      display: flex;
-      gap: 16px;
-      margin: 16px 0;
-      flex-wrap: wrap;
-    }
-    .stat-card {
-      background: var(--surface);
-      padding: 12px;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      text-align: center;
-      flex: 1;
-      min-width: 150px;
-    }
-    .stat-value { font-size: 1.2rem; font-weight: 500; color: var(--primary); }
-    @media (max-width: 768px) {
-      .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-      .app-bar { flex-direction: column; gap: 12px; }
-      .input-group { flex-direction: column; }
-      input, select { min-width: 100%; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Gestionnaire de Fichiers avec Google Login</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        /* Styles de la section de connexion */
+        #login-section {
+            text-align: center;
+        }
+
+        /* Styles de la section après connexion */
+        #file-management-section {
+            display: none; /* Caché par défaut */
+        }
+
+        #user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #user-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 2px solid #4CAF50;
+        }
+
+        #user-info p {
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        /* Styles du formulaire d'ajout */
+        #file-input-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+        }
+
+        #file-input-form input[type="file"] {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        #file-input-form button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        #file-input-form button:hover {
+            background-color: #45a049;
+        }
+
+        /* Styles de la liste des fichiers */
+        #file-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #file-list li {
+            background-color: #e9f5e9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95em;
+            border-left: 5px solid #4CAF50;
+        }
+
+        #file-list li span {
+            font-weight: 500;
+        }
+    </style>
+
+    <script>
+        // Fonction pour décoder le JWT (JSON Web Token)
+        function decodeJWT(token) {
+            let base64Url = token.split(".")[1];
+            let base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+            let jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split("")
+                    .map(function (c) {
+                        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+                    })
+                    .join("")
+            );
+            return JSON.parse(jsonPayload);
+        }
+
+        // Fonction de rappel appelée après la connexion Google
+        function handleCredentialResponse(response) {
+            console.log("Encoded JWT ID token: " + response.credential);
+
+            const userPayload = decodeJWT(response.credential);
+
+            // Mise à jour de l'interface utilisateur avec les infos utilisateur
+            document.getElementById('profile-img').src = userPayload.picture;
+            document.getElementById('profile-name').textContent = userPayload.name;
+            document.getElementById('profile-email').textContent = userPayload.email;
+
+            // Afficher la section de gestion de fichiers et cacher la connexion
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('file-management-section').style.display = 'block';
+
+            console.log("Utilisateur connecté : " + userPayload.name);
+        }
+
+        // Fonction pour gérer l'ajout d'un fichier (simulé)
+        function handleAddFile(event) {
+            event.preventDefault(); // Empêche le rechargement de la page
+
+            const fileInput = document.getElementById('file-upload');
+            const fileList = document.getElementById('file-list');
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                alert("Veuillez sélectionner un fichier.");
+                return;
+            }
+
+            // Simuler l'ajout et l'affichage des fichiers dans la liste
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const listItem = document.createElement('li');
+                
+                // Ici, nous ne sauvegardons pas le contenu réel, juste le nom et le type
+                // La gestion du stockage réel (persistance) nécessiterait un serveur !
+                listItem.innerHTML = `
+                    <span>📁 ${file.name}</span>
+                    <small>(${file.type}, ${Math.round(file.size / 1024)} KB)</small>
+                `;
+                fileList.appendChild(listItem);
+            }
+
+            // Réinitialiser le champ de fichier après l'ajout
+            fileInput.value = '';
+        }
+
+        // Attacher l'écouteur d'événement pour l'ajout de fichier après que le DOM soit chargé
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('file-input-form');
+            if (form) {
+                form.addEventListener('submit', handleAddFile);
+            }
+        });
+    </script>
 </head>
 <body>
-  <header class="app-bar">
-    <div class="app-title">
-      <span class="material-icons">folder_special</span>
-      FileHub
-    </div>
-    <div class="app-actions">
-      <button class="btn" onclick="fileHub.createFolder()">
-        <span class="material-icons">create_new_folder</span> Dossier
-      </button>
-      <button class="btn" onclick="fileHub.exportData()">
-        <span class="material-icons">file_download</span> Exporter
-      </button>
-      <button class="btn btn-danger" onclick="fileHub.resetDB()">
-        <span class="material-icons">delete_forever</span> Reset
-      </button>
-      <button class="btn fab" onclick="fileHub.goHome()">
-        <span class="material-icons">home</span>
-      </button>
-    </div>
-  </header>
+    <h1>Cloud Personnel (Statique)</h1>
+    <div class="container">
 
-  <div class="container">
-    <div class="stats" id="stats"></div>
-    
-    <div class="input-group">
-      <input type="text" id="searchInput" placeholder="🔍 Rechercher..." oninput="fileHub.searchFiles()">
-      <select id="sortSelect" onchange="fileHub.loadFiles()">
-        <option value="name">Nom</option>
-        <option value="date">Date</option>
-        <option value="size">Taille</option>
-      </select>
-    </div>
+        <div id="login-section">
+            <h2>Connectez-vous pour Accéder à Vos Fichiers</h2>
+            <div
+                id="g_id_onload"
+                data-auto_prompt="false"
+                data-callback="handleCredentialResponse"
+                data-client_id="PUT_YOUR_WEB_CLIENT_ID_HERE"
+            ></div>
+            <div class="g_id_signin"></div>
+        </div>
 
-    <div class="upload-area" id="uploadArea">
-      <div class="upload-icon"><span class="material-icons">cloud_upload</span></div>
-      <p>Glissez vos fichiers ici ou cliquez (images, vidéos, PDFs)</p>
-      <input type="file" id="fileInput" multiple accept="image/*,video/*,application/pdf" style="display:none;">
-      <select id="folderSelect"></select>
-    </div>
-
-    <div class="grid" id="folders"></div>
-    <div class="grid" id="files" style="display:none;"></div>
-  </div>
-
-  <div id="modal" class="modal">
-    <span class="modal-close material-icons" onclick="fileHub.closeModal()">close</span>
-    <div class="modal-content" id="modalContent"></div>
-  </div>
-
-  <div id="toast" class="toast"></div>
-
-  <script>
-    class FileHub {
-      constructor() {
-        this.db = null;
-        this.DB_NAME = "FileHubDB";
-        this.DB_VERSION = 1;
-        this.currentFolder = null;
-        this.currentFiles = [];
-        this.init();
-      }
-
-      init() {
-        this.openDB();
-        this.setupEvents();
-        this.loadFolders();
-        this.updateStats();
-      }
-
-      openDB() {
-        const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-        request.onupgradeneeded = (e) => {
-          this.db = e.target.result;
-          const store = this.db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
-          store.createIndex('folder', 'folder');
-          store.createIndex('name', 'name');
-          store.createIndex('type', 'type');
-          store.createIndex('timestamp', 'timestamp');
-        };
-        request.onsuccess = () => {
-          this.db = request.result;
-          this.loadFolders();
-          this.updateStats();
-          this.showToast('✅ FileHub prêt !');
-        };
-        request.onerror = () => this.showToast('❌ Erreur DB', true);
-      }
-
-      setupEvents() {
-        const uploadArea = document.getElementById('uploadArea');
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-          uploadArea.addEventListener(event, e => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.toggle('dragover', event === 'dragenter' || event === 'dragover');
-            if (event === 'drop') {
-              const folder = document.getElementById('folderSelect').value;
-              if (folder) this.uploadFiles(e.dataTransfer.files, folder);
-            }
-          });
-        });
-
-        uploadArea.addEventListener('click', () => document.getElementById('fileInput').click());
-        document.getElementById('fileInput').addEventListener('change', e => {
-          const folder = document.getElementById('folderSelect').value;
-          if (folder) this.uploadFiles(e.target.files, folder);
-        });
-
-        document.addEventListener('keydown', e => {
-          if (e.key === 'Escape') this.closeModal();
-        });
-      }
-
-      async uploadFiles(files, folder) {
-        if (!folder) return this.showToast('Choisissez un dossier !', true);
-        let success = 0;
-        for (const file of Array.from(files)) {
-          try {
-            const dataUrl = await this.fileToDataURL(file);
-            const compressed = await this.compressIfNeeded(file, dataUrl);
-            await this.saveFile({
-              folder,
-              name: file.name,
-              type: file.type || 'application/octet-stream',
-              data: compressed,
-              size: file.size,
-              timestamp: Date.now()
-            });
-            success++;
-          } catch (e) {
-            this.showToast(`Erreur: ${file.name}`, true);
-          }
-        }
-        this.showToast(`✅ ${success}/${files.length} fichier(s) uploadé(s)`);
-        if (this.currentFolder === folder) this.loadFiles();
-        this.loadFolders();
-        this.updateFolderSelect();
-        this.updateStats();
-      }
-
-      fileToDataURL(file) {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
-
-      compressIfNeeded(file, dataUrl) {
-        if (!file.type.startsWith('image/')) return Promise.resolve(dataUrl);
-        return new Promise(resolve => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const maxSize = 800;
-            let { width, height } = img;
-            if (width > height) {
-              if (width > maxSize) {
-                height = (height * maxSize) / width;
-                width = maxSize;
-              }
-            } else {
-              if (height > maxSize) {
-                width = (width * maxSize) / height;
-                height = maxSize;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL(file.type, 0.85));
-          };
-          img.onerror = () => resolve(dataUrl);
-          img.src = dataUrl;
-        });
-      }
-
-      saveFile(fileData) {
-        return new Promise((resolve, reject) => {
-          const tx = this.db.transaction('files', 'readwrite');
-          const store = tx.objectStore('files');
-          const req = store.add(fileData);
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-      }
-
-      loadFolders() {
-        const tx = this.db.transaction('files', 'readonly');
-        const store = tx.objectStore('files');
-        const req = store.getAll();
-        req.onsuccess = () => {
-          const folders = [...new Set(req.result
-            .filter(f => f.folder && f.folder !== 'undefined')
-            .map(f => f.folder)
-          )].sort();
-          document.getElementById('folders').innerHTML = folders.map(folder => {
-            const count = req.result.filter(f => f.folder === folder && f.name !== '.dossier').length;
-            return `
-              <div class="card folder-card" onclick="fileHub.openFolder('${folder}')">
-                <div class="folder-icon"><span class="material-icons">folder</span></div>
-                <div>${folder}</div>
-                <div class="file-size">${count} fichier(s)</div>
-              </div>
-            `;
-          }).join('');
-          this.updateFolderSelect(folders);
-        };
-      }
-
-      updateFolderSelect(folders = []) {
-        const select = document.getElementById('folderSelect');
-        select.innerHTML = '<option value="">Choisir un dossier</option>' + 
-          folders.map(f => `<option value="${f}">${f}</option>`).join('');
-      }
-
-      openFolder(folder) {
-        this.currentFolder = folder;
-        document.getElementById('folders').style.display = 'none';
-        document.getElementById('files').style.display = 'grid';
-        document.getElementById('uploadArea').style.display = 'none';
-        this.loadFiles();
-      }
-
-      loadFiles() {
-        if (!this.currentFolder) return;
-        const tx = this.db.transaction('files', 'readonly');
-        const store = tx.objectStore('files');
-        const index = store.index('folder');
-        const req = index.getAll(this.currentFolder);
-        req.onsuccess = () => {
-          this.currentFiles = req.result.filter(f => f.name !== '.dossier');
-          const sortBy = document.getElementById('sortSelect').value;
-          this.currentFiles.sort((a, b) => {
-            if (sortBy === 'name') return a.name.localeCompare(b.name);
-            if (sortBy === 'date') return b.timestamp - a.timestamp;
-            if (sortBy === 'size') return b.size - a.size;
-            return 0;
-          });
-          document.getElementById('files').innerHTML = this.currentFiles.map(file => `
-            <div class="card">
-              <div class="file-preview ${file.type.startsWith('image/') ? '' : 'loading'}" 
-                   onclick="fileHub.openModal(${file.id})">
-                ${file.type.startsWith('image/') ? 
-                  `<img src="${file.data}" alt="${file.name}" 
-                        onload="this.parentNode.classList.remove('loading')"
-                        onerror="this.parentNode.innerHTML='<span class=\\'material-icons\\'>error</span>'">` : 
-                  file.type.startsWith('video/') ? 
-                  `<span class="material-icons">movie</span>` : 
-                  `<span class="material-icons">description</span>`}
-              </div>
-              <div class="file-info">
-                <div class="file-name">${file.name}</div>
-                <div class="file-size">${this.formatBytes(file.size)}</div>
-                <button class="btn btn-danger" onclick="fileHub.deleteFile(${file.id}, event)">Supprimer</button>
-              </div>
+        <div id="file-management-section">
+            
+            <div id="user-info">
+                <img id="profile-img" src="" alt="Image de profil">
+                <div>
+                    <p>Bienvenue, <span id="profile-name"></span></p>
+                    <small id="profile-email"></small>
+                </div>
             </div>
-          `).join('');
-        };
-      }
 
-      openModal(id) {
-        const tx = this.db.transaction('files', 'readonly');
-        const store = tx.objectStore('files');
-        const req = store.get(id);
-        req.onsuccess = () => {
-          const file = req.result;
-          const modal = document.getElementById('modal');
-          const content = document.getElementById('modalContent');
-          if (file.type.startsWith('image/')) {
-            content.innerHTML = `<img src="${file.data}" alt="${file.name}">`;
-          } else if (file.type.startsWith('video/')) {
-            content.innerHTML = `<video src="${file.data}" controls autoplay></video>`;
-          } else {
-            content.innerHTML = `<iframe src="${file.data}" style="width:100%;height:100%;border:none;"></iframe>`;
-          }
-          modal.classList.add('active');
-        };
-      }
+            <h2>Ajouter un Fichier (Image, Vidéo, Doc)</h2>
+            <form id="file-input-form">
+                <input type="file" id="file-upload" name="file-upload" accept="image/*,video/*,application/pdf,.doc,.docx" multiple required>
+                <button type="submit">Ajouter à la Liste</button>
+            </form>
 
-      closeModal() {
-        document.getElementById('modal').classList.remove('active');
-      }
-
-      deleteFile(id, event) {
-        event.stopPropagation();
-        if (!confirm('Supprimer ce fichier ?')) return;
-        const tx = this.db.transaction('files', 'readwrite');
-        const store = tx.objectStore('files');
-        store.delete(id).onsuccess = () => {
-          this.showToast('Fichier supprimé');
-          this.loadFiles();
-          this.loadFolders();
-          this.updateStats();
-        };
-      }
-
-      async createFolder() {
-        const name = prompt('Nom du dossier :').trim();
-        if (!name) return this.showToast('Nom requis', true);
-        await this.saveFile({
-          folder: name,
-          name: '.dossier',
-          type: 'folder',
-          data: '',
-          size: 0,
-          timestamp: Date.now()
-        });
-        this.loadFolders();
-        this.updateFolderSelect();
-        this.showToast('Dossier créé');
-      }
-
-      async exportData() {
-        const tx = this.db.transaction('files', 'readonly');
-        const store = tx.objectStore('files');
-        const req = store.getAll();
-        req.onsuccess = () => {
-          const data = req.result;
-          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `filehub-backup-${new Date().toISOString().split('T')[0]}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-          this.showToast('Export terminé');
-        };
-      }
-
-      async resetDB() {
-        if (!confirm('Supprimer TOUS les fichiers ?')) return;
-        await indexedDB.deleteDatabase(this.DB_NAME);
-        location.reload();
-      }
-
-      goHome() {
-        this.currentFolder = null;
-        document.getElementById('folders').style.display = 'grid';
-        document.getElementById('files').style.display = 'none';
-        document.getElementById('uploadArea').style.display = 'block';
-        this.loadFolders();
-      }
-
-      searchFiles() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        if (!query) return this.loadFiles();
-        const tx = this.db.transaction('files', 'readonly');
-        const store = tx.objectStore('files');
-        const req = store.getAll();
-        req.onsuccess = () => {
-          this.currentFiles = req.result.filter(f => 
-            f.name.toLowerCase().includes(query) || 
-            (f.folder && f.folder.toLowerCase().includes(query))
-          );
-          this.loadFiles();
-        };
-      }
-
-      updateStats() {
-        const tx = this.db.transaction('files', 'readonly');
-        const store = tx.objectStore('files');
-        const req = store.getAll();
-        req.onsuccess = () => {
-          const files = req.result;
-          const folders = [...new Set(files.map(f => f.folder).filter(Boolean))].length;
-          const fileCount = files.filter(f => f.name !== '.dossier').length;
-          const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
-          document.getElementById('stats').innerHTML = `
-            <div class="stat-card">
-              <div class="stat-value">${folders}</div>
-              <div class="file-size">Dossiers</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${fileCount}</div>
-              <div class="file-size">Fichiers</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${this.formatBytes(totalSize)}</div>
-              <div class="file-size">Stockage</div>
-            </div>
-          `;
-        };
-      }
-
-      formatBytes(bytes) {
-        if (!bytes) return '0 B';
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
-      }
-
-      showToast(msg, error = false) {
-        const toast = document.getElementById('toast');
-        toast.textContent = msg;
-        toast.className = `toast ${error ? 'error' : ''} show`;
-        setTimeout(() => toast.classList.remove('show'), 3000);
-      }
-    }
-
-    const fileHub = new FileHub();
-
-    // PWA Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('data:text/javascript,addEventListener("install",()=>{self.skipWaiting()});');
-    }
-  </script>
+            <h2>Mes Fichiers (Simulation)</h2>
+            <ul id="file-list">
+                <li>
+                    <span>ℹ️ **Note Importante:**</span>
+                    <small>Vos fichiers ne sont PAS sauvegardés de manière permanente.</small>
+                </li>
+            </ul>
+        </div>
+    </div>
 </body>
 </html>
