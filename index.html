@@ -7,6 +7,7 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
+        /* ... (Le CSS reste inchangé) ... */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
@@ -124,7 +125,70 @@
     </style>
 
     <script>
-        // Fonction pour décoder le JWT (JSON Web Token)
+        const USER_STORAGE_KEY = 'googleUserProfile';
+        const FILE_LIST_KEY = 'userFileList';
+
+        // --- Fonctions de Stockage Local ---
+
+        function saveUserData(payload) {
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(payload));
+        }
+
+        function loadUserData() {
+            const data = localStorage.getItem(USER_STORAGE_KEY);
+            return data ? JSON.parse(data) : null;
+        }
+
+        function saveFileList(files) {
+            localStorage.setItem(FILE_LIST_KEY, JSON.stringify(files));
+        }
+
+        function loadFileList() {
+            const data = localStorage.getItem(FILE_LIST_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+        
+        // --- Fonctions d'Affichage ---
+
+        function updateUI(userPayload, fileList) {
+            // Mise à jour de l'interface utilisateur avec les infos utilisateur
+            document.getElementById('profile-img').src = userPayload.picture;
+            document.getElementById('profile-name').textContent = userPayload.name;
+            document.getElementById('profile-email').textContent = userPayload.email;
+
+            // Afficher la section de gestion de fichiers et cacher la connexion
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('file-management-section').style.display = 'block';
+            
+            // Afficher les fichiers sauvegardés
+            renderFileList(fileList);
+        }
+        
+        function renderFileList(files) {
+            const fileListContainer = document.getElementById('file-list');
+            fileListContainer.innerHTML = ''; // Nettoyer la liste existante
+            
+            if (files.length === 0) {
+                fileListContainer.innerHTML = `
+                    <li>
+                        <span>ℹ️ **Note Importante:**</span>
+                        <small>Vos fichiers ne sont PAS sauvegardés de manière permanente (seulement leur nom).</small>
+                    </li>`;
+                return;
+            }
+
+            files.forEach(file => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    <span>📁 ${file.name}</span>
+                    <small>(${file.type}, ${file.size} KB)</small>
+                `;
+                fileListContainer.appendChild(listItem);
+            });
+        }
+        
+        // --- Fonctions Google Identity Services ---
+
         function decodeJWT(token) {
             let base64Url = token.split(".")[1];
             let base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
@@ -139,30 +203,25 @@
             return JSON.parse(jsonPayload);
         }
 
-        // Fonction de rappel appelée après la connexion Google
         function handleCredentialResponse(response) {
-            console.log("Encoded JWT ID token: " + response.credential);
-
             const userPayload = decodeJWT(response.credential);
+            
+            // 1. Sauvegarder les données utilisateur (pour la persistance)
+            saveUserData(userPayload);
+            
+            // 2. Mettre à jour l'interface
+            const fileList = loadFileList();
+            updateUI(userPayload, fileList);
 
-            // Mise à jour de l'interface utilisateur avec les infos utilisateur
-            document.getElementById('profile-img').src = userPayload.picture;
-            document.getElementById('profile-name').textContent = userPayload.name;
-            document.getElementById('profile-email').textContent = userPayload.email;
-
-            // Afficher la section de gestion de fichiers et cacher la connexion
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('file-management-section').style.display = 'block';
-
-            console.log("Utilisateur connecté : " + userPayload.name);
+            console.log("Utilisateur connecté et profil sauvegardé : " + userPayload.name);
         }
 
-        // Fonction pour gérer l'ajout d'un fichier (simulé)
+        // --- Gestion des Fichiers ---
+
         function handleAddFile(event) {
-            event.preventDefault(); // Empêche le rechargement de la page
+            event.preventDefault();
 
             const fileInput = document.getElementById('file-upload');
-            const fileList = document.getElementById('file-list');
             const files = fileInput.files;
 
             if (files.length === 0) {
@@ -170,35 +229,54 @@
                 return;
             }
 
-            // Simuler l'ajout et l'affichage des fichiers dans la liste
+            let savedFiles = loadFileList();
+
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const listItem = document.createElement('li');
-                
-                // Ici, nous ne sauvegardons pas le contenu réel, juste le nom et le type
-                // La gestion du stockage réel (persistance) nécessiterait un serveur !
-                listItem.innerHTML = `
-                    <span>📁 ${file.name}</span>
-                    <small>(${file.type}, ${Math.round(file.size / 1024)} KB)</small>
-                `;
-                fileList.appendChild(listItem);
+                const fileData = {
+                    name: file.name,
+                    type: file.type,
+                    size: Math.round(file.size / 1024) // Taille en KB
+                };
+                // Ajouter les métadonnées du fichier à la liste
+                savedFiles.push(fileData);
             }
 
-            // Réinitialiser le champ de fichier après l'ajout
+            // 1. Sauvegarder la liste mise à jour dans localStorage
+            saveFileList(savedFiles);
+
+            // 2. Afficher la liste mise à jour
+            renderFileList(savedFiles);
+
+            // Réinitialiser le champ de fichier
             fileInput.value = '';
         }
 
-        // Attacher l'écouteur d'événement pour l'ajout de fichier après que le DOM soit chargé
+        // --- Initialisation de la Page ---
+
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('file-input-form');
             if (form) {
                 form.addEventListener('submit', handleAddFile);
             }
+
+            // Tentative de connexion automatique au chargement
+            const storedUser = loadUserData();
+            const storedFiles = loadFileList();
+
+            if (storedUser) {
+                // Si des données utilisateur sont trouvées, on affiche l'interface de gestion
+                updateUI(storedUser, storedFiles);
+                console.log("Connexion rétablie via localStorage.");
+            } else {
+                // Sinon, on laisse le bouton de connexion Google s'afficher
+                console.log("Aucune session trouvée, affichage du bouton de connexion.");
+            }
         });
     </script>
 </head>
 <body>
-    <h1>Cloud Personnel (Statique)</h1>
+    <h1>Cloud Personnel (avec Persistance Locale)</h1>
     <div class="container">
 
         <div id="login-section">
@@ -228,13 +306,9 @@
                 <button type="submit">Ajouter à la Liste</button>
             </form>
 
-            <h2>Mes Fichiers (Simulation)</h2>
+            <h2>Mes Fichiers (Simulation - Stockés dans votre Navigateur)</h2>
             <ul id="file-list">
-                <li>
-                    <span>ℹ️ **Note Importante:**</span>
-                    <small>Vos fichiers ne sont PAS sauvegardés de manière permanente.</small>
-                </li>
-            </ul>
+                </ul>
         </div>
     </div>
 </body>
