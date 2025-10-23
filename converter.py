@@ -1,44 +1,66 @@
-import sys
+# converter.py (Exemple d'API Flask)
+import yt_dlp
+import json
 import os
-from moviepy.editor import VideoFileClip
+from flask import Flask, request, jsonify
 
-def convert_mp4_to_mp3(input_path, output_path):
-    """
-    Convertit un fichier MP4 en MP3.
-    """
+app = Flask(__name__)
+# Chemin où les fichiers MP3 seront sauvegardés (doit être accessible)
+DOWNLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mp3_downloads")
+if not os.path.exists(DOWNLOAD_FOLDER):
+    os.makedirs(DOWNLOAD_FOLDER)
+
+# Configuration FFmpeg est essentielle pour yt-dlp
+# Assurez-vous que FFmpeg est installé sur le serveur d'hébergement.
+
+@app.route('/convert', methods=['POST'])
+def convert_youtube_to_mp3():
+    data = request.get_json()
+    youtube_url = data.get('youtube_url')
+
+    if not youtube_url:
+        return jsonify({"error": "URL YouTube manquante"}), 400
+
+    # Options de yt-dlp pour extraire l'audio et convertir en MP3
+    ydl_opts = {
+        # Télécharge la meilleure qualité audio possible
+        'format': 'bestaudio/best', 
+        # Configure le post-traitement pour extraire l'audio et l'encoder
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192', # Qualité MP3 (192kbps)
+        }],
+        # Chemin de sortie: le dossier, puis le titre de la vidéo comme nom
+        'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(title)s.%(ext)s'), 
+        'noplaylist': True, # N'accepte pas les playlists
+        # 'verbose': True, # Décommenter pour le débogage
+    }
+
     try:
-        # Charger le clip vidéo
-        video_clip = VideoFileClip(input_path)
+        # Exécute le processus de téléchargement et de conversion
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(youtube_url, download=True)
+            # Récupère le chemin du fichier MP3 généré
+            output_filepath = ydl.prepare_filename(info_dict).replace(info_dict['ext'], 'mp3')
         
-        # Extraire l'audio
-        audio_clip = video_clip.audio
+        # --- IMPORTANT ---
+        # Ici, vous devez retourner un lien accessible par le frontend.
+        # Dans un environnement de production, vous pourriez uploader ce fichier
+        # sur un service de stockage cloud (S3, Cloudflare R2) et retourner le lien public.
         
-        # Écrire l'audio dans un fichier MP3
-        audio_clip.write_audiofile(output_path)
-        
-        # Fermer les clips pour libérer les ressources
-        audio_clip.close()
-        video_clip.close()
-        
-        print(f"Succès: '{input_path}' converti en '{output_path}'")
-        return True
+        # Pour cet exemple local, on simule le lien:
+        simulated_download_link = f"https://votre-serveur.com/downloads/{os.path.basename(output_filepath)}"
+
+        return jsonify({
+            "message": "Conversion réussie",
+            "mp3_url": simulated_download_link,
+            "filename": os.path.basename(output_filepath)
+        })
+
     except Exception as e:
-        print(f"Erreur lors de la conversion: {e}", file=sys.stderr)
-        return False
+        return jsonify({"error": f"Erreur de conversion: {str(e)}"}), 500
 
-# Exemple d'utilisation (à intégrer dans un framework web comme Flask ou FastAPI)
-if __name__ == "__main__":
-    # Ceci est un exemple si le script est appelé directement
-    if len(sys.argv) != 3:
-        print("Usage: python converter.py <input_mp4_path> <output_mp3_path>", file=sys.stderr)
-        sys.exit(1)
-        
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
-
-    # S'assurer que les fichiers existent
-    if not os.path.exists(input_file):
-        print(f"Erreur: Le fichier d'entrée '{input_file}' n'existe pas.", file=sys.stderr)
-        sys.exit(1)
-
-    convert_mp4_to_mp3(input_file, output_file)
+if __name__ == '__main__':
+    # Lance le serveur Flask (pour le développement local)
+    app.run(debug=True, port=5000)
