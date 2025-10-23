@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Convertisseur YouTube vers MP3</title>
+    <title>Minuteur Pomodoro 🍅</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>▶️ YouTube en MP3 🎵</h1>
-        <p>Entrez le lien YouTube de la vidéo à convertir.</p>
 
-        <input type="text" id="youtubeUrl" placeholder="Ex: https://www.youtube.com/watch?v=..." required>
-        
-        <button id="convertButton">Convertir en MP3</button>
+    <div class="pomodoro-container">
+        <h1>Minuteur Pomodoro</h1>
+        <div class="timer-mode">
+            <button id="work-btn" class="active">Travail (25m)</button>
+            <button id="break-btn">Pause (5m)</button>
+        </div>
 
-        <div id="statusMessage" class="hidden"></div>
-        <a id="downloadLink" class="hidden" href="#" download>Télécharger le MP3</a>
-        
-        <p class="warning">⚠️ Cette conversion nécessite l'hébergement d'un serveur Python (ex: Flask sur Render/Heroku).</p>
+        <div id="timer-display" class="timer-display">25:00</div>
+
+        <div class="controls">
+            <button id="start-pause-btn">Démarrer</button>
+            <button id="reset-btn">Réinitialiser</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
