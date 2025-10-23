@@ -1,0 +1,35 @@
+name: Python CI for Converter
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        # Installation des dépendances pour moviepy, y compris FFmpeg
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test basic script run
+      # Simule un appel au script de conversion (nécessite un fichier mp4 factice
+      # pour un test réel, ici on fait juste un appel "dry-run" simple)
+      # Pour un vrai test, vous auriez besoin d'un fichier mp4 de test
+      run: |
+        echo "Exécution des tests Python (nécessiterait des fichiers et tests unitaires)"
+        # Exemple de test unitaire ici si vous en aviez.
