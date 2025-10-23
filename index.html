@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Convertisseur MP4 vers MP3</title>
+    <title>Convertisseur YouTube vers MP3</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>🎧 Convertisseur Vidéo en Audio 🎵</h1>
-        <p>Sélectionnez votre fichier MP4 pour le convertir en MP3.</p>
+        <h1>▶️ YouTube en MP3 🎵</h1>
+        <p>Entrez le lien YouTube de la vidéo à convertir.</p>
 
-        <input type="file" id="videoFile" accept="video/mp4">
-        <button id="convertButton" disabled>Convertir</button>
+        <input type="text" id="youtubeUrl" placeholder="Ex: https://www.youtube.com/watch?v=..." required>
+        
+        <button id="convertButton">Convertir en MP3</button>
 
         <div id="statusMessage" class="hidden"></div>
         <a id="downloadLink" class="hidden" href="#" download>Télécharger le MP3</a>
         
-        <p class="warning">⚠️ Ceci est un exemple statique. La conversion réelle nécessite un serveur.</p>
+        <p class="warning">⚠️ Cette conversion nécessite l'hébergement d'un serveur Python (ex: Flask sur Render/Heroku).</p>
     </div>
 
     <script src="script.js"></script>
