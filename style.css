@@ -1,84 +1,86 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    color: #333;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
+    background-color: #f4f4f9;
 }
 
-.container {
+.pomodoro-container {
     background-color: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     text-align: center;
-    width: 90%;
-    max-width: 500px;
+    min-width: 300px;
 }
 
 h1 {
-    color: #007bff;
-    margin-bottom: 20px;
+    color: #333;
+    margin-bottom: 30px;
 }
 
-input[type="file"], button {
+.timer-mode button {
     padding: 10px 15px;
-    margin: 10px 0;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-    cursor: pointer;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-button {
-    background-color: #28a745;
-    color: white;
+    margin: 0 5px;
     border: none;
-    transition: background-color 0.3s;
-}
-
-button:hover:not(:disabled) {
-    background-color: #218838;
-}
-
-button:disabled {
-    background-color: #90c69d;
-    cursor: not-allowed;
-}
-
-.hidden {
-    display: none;
-}
-
-#statusMessage {
-    margin-top: 15px;
-    padding: 10px;
     border-radius: 5px;
-    background-color: #ffe0b2; /* Orange léger pour avertissement */
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+    background-color: #eee;
+    color: #666;
 }
 
-#downloadLink {
-    display: block;
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #007bff;
+.timer-mode button.active {
+    background-color: #ff6347; /* Tomate */
     color: white;
-    text-decoration: none;
+}
+
+#timer-display {
+    font-size: 80px;
+    font-weight: bold;
+    margin: 40px 0;
+    color: #ff6347; /* Couleur principale */
+}
+
+.controls button {
+    padding: 12px 25px;
+    margin: 0 10px;
+    border: none;
     border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
     transition: background-color 0.3s;
 }
 
-#downloadLink:hover {
-    background-color: #0056b3;
+#start-pause-btn {
+    background-color: #4CAF50; /* Vert pour Démarrer */
+    color: white;
 }
 
-.warning {
-    margin-top: 20px;
-    font-size: 0.8em;
-    color: #6c757d;
+#start-pause-btn:hover {
+    background-color: #45a049;
+}
+
+#reset-btn {
+    background-color: #f44336; /* Rouge pour Réinitialiser */
+    color: white;
+}
+
+#reset-btn:hover {
+    background-color: #da190b;
+}
+
+/* Optionnel : style pour le mode pause */
+body.break-time #timer-display,
+body.break-time .timer-mode button.active {
+    color: #4682b4; /* Bleu acier pour la pause */
+    background-color: #4682b4;
+}
+body.break-time #timer-display {
+    color: #4682b4;
 }
