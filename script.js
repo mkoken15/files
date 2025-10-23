@@ -1,69 +1,62 @@
+// script.js
 document.addEventListener('DOMContentLoaded', () => {
-    const fileInput = document.getElementById('videoFile');
+    const urlInput = document.getElementById('youtubeUrl');
     const convertButton = document.getElementById('convertButton');
     const statusMessage = document.getElementById('statusMessage');
     const downloadLink = document.getElementById('downloadLink');
 
-    // Activer le bouton après la sélection d'un fichier
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
-            convertButton.disabled = false;
-        } else {
-            convertButton.disabled = true;
-        }
+    // Le bouton est toujours actif si l'input n'est pas vide
+    urlInput.addEventListener('input', () => {
+        convertButton.disabled = urlInput.value.trim() === '';
         statusMessage.classList.add('hidden');
         downloadLink.classList.add('hidden');
     });
 
-    // Gérer le clic sur le bouton
     convertButton.addEventListener('click', () => {
-        const file = fileInput.files[0];
-        if (!file) {
-            alert("Veuillez sélectionner un fichier MP4.");
+        const url = urlInput.value.trim();
+        if (!url) {
+            alert("Veuillez entrer une URL YouTube.");
             return;
         }
 
-        // --- Début de la simulation de l'appel backend ---
-        statusMessage.textContent = `Conversion de "${file.name}" en cours...`;
+        // --- Début de l'appel backend RÉEL (ou simulation) ---
+        statusMessage.textContent = `Envoi de l'URL pour conversion...`;
         statusMessage.classList.remove('hidden');
         convertButton.disabled = true;
-        downloadLink.classList.add('hidden');
 
-        // En réalité, vous enverriez le fichier à votre API de conversion (backend)
-        // en utilisant 'fetch' ou 'XMLHttpRequest'.
-        // Exemple (schématique) :
-        /*
-        const formData = new FormData();
-        formData.append('video', file);
-
-        fetch('VOTRE_URL_DE_CONVERSION_API', {
+        // **Étape 1: Appel à votre API de conversion (Backend Python)**
+        fetch('VOTRE_URL_API_DE_CONVERSION', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // On envoie l'URL YouTube au serveur
+            body: JSON.stringify({ youtube_url: url })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erreur réseau ou du serveur.');
+            }
+            return response.json();
+        })
         .then(data => {
-            // data.mp3_url contiendrait le lien vers le fichier MP3
-            statusMessage.textContent = "Conversion terminée avec succès !";
-            downloadLink.href = data.mp3_url; // L'URL du MP3 généré
-            downloadLink.download = file.name.replace('.mp4', '.mp3');
-            downloadLink.classList.remove('hidden');
-            convertButton.disabled = false;
+            // Le serveur doit retourner l'URL où le MP3 est stocké
+            if (data.mp3_url) {
+                statusMessage.textContent = "✅ Conversion terminée !";
+                downloadLink.href = data.mp3_url; 
+                // Suggestion de nom de fichier (à récupérer du serveur pour être précis)
+                downloadLink.download = 'youtube_audio.mp3'; 
+                downloadLink.classList.remove('hidden');
+            } else {
+                statusMessage.textContent = "Erreur: Le serveur n'a pas retourné de lien de téléchargement.";
+            }
         })
         .catch(error => {
-            statusMessage.textContent = "Erreur lors de la conversion.";
-            convertButton.disabled = false;
+            statusMessage.textContent = `❌ Erreur: ${error.message}. Vérifiez l'URL du serveur.`;
             console.error('Erreur:', error);
-        });
-        */
-
-        // SIMULATION : Affichage du succès après un délai
-        setTimeout(() => {
-            statusMessage.textContent = "Conversion (simulée) terminée !";
-            // L'URL ici devrait pointer vers le fichier généré par le serveur
-            downloadLink.href = '#'; // Remplacer par l'URL du fichier MP3
-            downloadLink.download = file.name.replace('.mp4', '.mp3');
-            downloadLink.classList.remove('hidden');
+        })
+        .finally(() => {
             convertButton.disabled = false;
-        }, 3000); // 3 secondes de simulation
+        });
     });
 });
